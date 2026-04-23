@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CryptoTrace · Анализ цепочки транзакций</title>
+  <script src="https://unpkg.com/vis-network@9.1.9/dist/vis-network.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/vis-network@9.1.9/dist/dist/vis-network.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#f0f4f8; --surface:#fff; --surface2:#f8fafc; --border:#e2e8f0;
+      --primary:#5b5ef4; --primary-light:#eef0ff; --primary-dark:#4548d4;
+      --success:#16a34a; --success-bg:#dcfce7; --success-light:#f0fdf4;
+      --danger:#dc2626;  --danger-bg:#fee2e2;
+      --warn:#ea580c;    --warn-bg:#ffedd5;
+      --text:#0f172a; --text-2:#475569; --text-3:#94a3b8;
+      --radius:14px; --radius-sm:8px; --radius-xs:6px;
+      --shadow-sm:0 1px 3px rgba(0,0,0,.08);
+      --shadow:0 4px 16px rgba(0,0,0,.08);
+      --font:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+      --mono:'SF Mono','Cascadia Code','Fira Code',monospace;
+    }
+    body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; font-size:14px; }
+
+    /* HEADER */
+    header { background:var(--surface); border-bottom:1px solid var(--border); padding:0 24px; height:60px; display:flex; align-items:center; gap:16px; position:sticky; top:0; z-index:100; }
+    .logo { font-size:17px; font-weight:700; color:var(--primary); display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+    .logo svg { width:26px; height:26px; }
+    .search-wrap { flex:1; display:flex; gap:8px; max-width:680px; }
+    .chain-badge { display:flex; align-items:center; padding:0 12px; height:40px; border-radius:var(--radius-sm); background:var(--primary-light); color:var(--primary); font-size:12px; font-weight:700; white-space:nowrap; }
+    .search-input { flex:1; border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:0 14px; height:40px; font-size:13px; font-family:var(--mono); background:var(--surface2); color:var(--text); outline:none; transition:border-color .15s,background .15s; min-width:0; }
+    .search-input::placeholder { color:var(--text-3); font-family:var(--font); }
+    .search-input:focus { border-color:var(--primary); background:white; }
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:0 16px; height:40px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; cursor:pointer; border:none; transition:background .15s,transform .1s,border-color .15s; white-space:nowrap; font-family:inherit; color:inherit; }
+    .btn:active { transform:scale(.97); }
+    .btn-primary { background:var(--primary); color:white; }
+    .btn-primary:hover { background:var(--primary-dark); }
+    .btn-ghost { background:transparent; color:var(--text-2); border:1.5px solid var(--border); }
+    .btn-ghost:hover { background:var(--surface2); border-color:var(--text-3); }
+    .btn-sm { height:32px; padding:0 12px; font-size:12px; }
+    .btn-icon { padding:0; width:32px; justify-content:center; }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+    .btn:disabled:hover { background:transparent; }
+    .header-r { display:flex; gap:8px; margin-left:auto; }
+    kbd { font-family:var(--mono); font-size:10px; background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:1px 5px; color:var(--text-3); }
+
+    /* LANDING */
+    #landing { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:calc(100vh - 60px); padding:40px 24px; text-align:center; }
+    .landing-icon { width:72px; height:72px; background:var(--primary-light); border-radius:20px; display:flex; align-items:center; justify-content:center; margin-bottom:24px; }
+    .landing-icon svg { width:40px; height:40px; color:var(--primary); }
+    .landing-title { font-size:32px; font-weight:800; margin-bottom:10px; letter-spacing:-0.02em; }
+    .landing-sub { color:var(--text-2); font-size:15px; margin-bottom:32px; max-width:520px; line-height:1.55; }
+    .landing-search { display:flex; gap:10px; width:100%; max-width:620px; }
+    .landing-search .search-input { height:48px; font-size:14px; }
+    .landing-search .btn { height:48px; padding:0 28px; font-size:14px; }
+    .examples { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:20px; align-items:center; }
+    .chip { background:var(--surface); border:1.5px solid var(--border); border-radius:999px; padding:4px 14px; font-size:12px; font-family:var(--mono); cursor:pointer; color:var(--text-2); transition:border-color .15s,color .15s; }
+    .chip:hover { border-color:var(--primary); color:var(--primary); }
+    .landing-hint { margin-top:28px; font-size:12px; color:var(--text-3); display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
+
+    /* APP */
+    #app { display:none; flex-direction:column; height:calc(100vh - 60px); overflow:hidden; }
+    #app.visible { display:flex; }
+
+    /* STATS */
+    .stats-row { padding:12px 20px; display:flex; gap:10px; flex-shrink:0; overflow-x:auto; scrollbar-width:none; background:var(--surface); border-bottom:1px solid var(--border); }
+    .stats-row::-webkit-scrollbar { display:none; }
+    .stat-card { padding:8px 14px; min-width:130px; flex-shrink:0; }
+    .stat-label { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-3); font-weight:700; margin-bottom:3px; }
+    .stat-value { font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; }
+    .stat-sub { font-size:11px; color:var(--text-2); }
+    .stat-divider { width:1px; background:var(--border); flex-shrink:0; margin:4px 0; }
+
+    /* PANELS */
+    .panels { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; padding:16px 20px 20px; flex:1; min-height:0; }
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm); overflow:hidden; display:flex; flex-direction:column; min-height:0; }
+    .panel-header { padding:10px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .panel-title { font-weight:700; font-size:13px; }
+    .panel-hint { font-size:11px; color:var(--text-3); margin-left:4px; }
+    .panel-actions { margin-left:auto; display:flex; gap:6px; }
+    .badge { background:var(--primary-light); color:var(--primary); border-radius:999px; padding:2px 8px; font-size:11px; font-weight:700; }
+
+    /* ACTIVE WALLET BAR */
+    .active-bar { padding:7px 14px; background:var(--primary-light); border-bottom:1px solid #dde0ff; display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .active-bar-label { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--primary); font-weight:700; }
+    .active-bar-addr { font-family:var(--mono); font-size:11px; color:var(--primary-dark); font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .icon-btn { width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:var(--radius-xs); background:transparent; border:none; cursor:pointer; color:var(--primary); font-size:12px; transition:background .12s; }
+    .icon-btn:hover { background:rgba(91,94,244,.15); }
+
+    /* TABLE */
+    .table-wrap { overflow-y:auto; flex:1; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    thead { position:sticky; top:0; z-index:1; }
+    th { background:var(--surface2); padding:7px 10px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-3); font-weight:700; border-bottom:1px solid var(--border); white-space:nowrap; }
+    td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:#fafbff; }
+    .tx-hash { font-family:var(--mono); font-size:11px; color:var(--primary); cursor:pointer; }
+    .tx-hash:hover { text-decoration:underline; }
+    .addr-link { font-family:var(--mono); font-size:11px; color:var(--primary); cursor:pointer; display:block; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .addr-link:hover { text-decoration:underline; }
+    .badge-in  { display:inline-flex; align-items:center; background:var(--success-bg); color:var(--success); border-radius:999px; padding:2px 7px; font-size:10px; font-weight:700; }
+    .badge-out { display:inline-flex; align-items:center; background:var(--danger-bg);  color:var(--danger);  border-radius:999px; padding:2px 7px; font-size:10px; font-weight:700; }
+    .amount-pos { color:var(--success); font-weight:600; font-variant-numeric:tabular-nums; }
+    .amount-neg { color:var(--danger);  font-weight:600; font-variant-numeric:tabular-nums; }
+    .text-muted { color:var(--text-3); font-size:11px; }
+    .spin { display:inline-block; width:10px; height:10px; border:2px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .filters { padding:7px 12px; display:flex; gap:6px; align-items:center; border-bottom:1px solid var(--border); flex-shrink:0; font-size:11px; }
+    .filter-chip { padding:3px 10px; border-radius:999px; border:1.5px solid var(--border); background:var(--surface); cursor:pointer; font-size:11px; font-weight:600; color:var(--text-2); transition:all .12s; user-select:none; }
+    .filter-chip:hover { border-color:var(--text-3); }
+    .filter-chip.active { background:var(--primary); border-color:var(--primary); color:white; }
+
+    /* PAGINATION */
+    .pagination { display:flex; align-items:center; justify-content:space-between; padding:7px 12px; border-top:1px solid var(--border); font-size:11px; color:var(--text-2); flex-shrink:0; }
+
+    /* GRAPH */
+    .graph-body {
+      flex:1; position:relative; min-height:0; overflow:hidden;
+      background-color:#f0f4f8;
+      background-image: radial-gradient(circle, #c8d3df 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    #graph-canvas { width:100%; height:100%; }
+    .graph-empty { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-3); gap:10px; font-size:13px; pointer-events:none; }
+    .graph-empty svg { width:48px; height:48px; opacity:.5; }
+
+    /* NODE BUTTONS overlay */
+    .node-btns {
+      position:absolute;
+      display:flex;
+      gap:5px;
+      pointer-events:all;
+      transform:translateX(-50%);
+      z-index:20;
+    }
+    .gnb {
+      width:24px; height:24px;
+      border-radius:50%;
+      border:2px solid var(--border);
+      background:var(--surface);
+      font-size:15px;
+      font-weight:700;
+      line-height:1;
+      cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 2px 8px rgba(0,0,0,.15);
+      transition:background .12s, border-color .12s, transform .1s;
+      color:var(--text-2);
+      user-select:none;
+      font-family:inherit;
+      padding:0;
+    }
+    .gnb:hover { background:var(--surface2); border-color:var(--text-3); transform:scale(1.12); }
+    .gnb.fwd { background:var(--primary); color:white; border-color:var(--primary); }
+    .gnb.fwd:hover { background:var(--primary-dark); }
+    .gnb.bck { background:#fff; color:var(--primary); border-color:var(--primary); }
+    .gnb.bck:hover { background:var(--primary-light); }
+    .gnb.loading { opacity:.6; cursor:wait; pointer-events:none; transform:none; }
+    .gnb.done { opacity:.3; cursor:default; transform:none; }
+    .gnb.done:hover { transform:none; background:inherit; }
+
+    /* GRAPH CONTROLS */
+    .graph-controls { position:absolute; bottom:14px; right:14px; display:flex; flex-direction:column; gap:5px; z-index:10; }
+    .graph-btn { width:34px; height:34px; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius-xs); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; box-shadow:var(--shadow-sm); user-select:none; transition:all .12s; font-weight:600; color:var(--text-2); }
+    .graph-btn:hover { background:var(--primary-light); color:var(--primary); border-color:var(--primary); }
+
+    /* GRAPH LEGEND */
+    .graph-legend { position:absolute; top:10px; left:10px; background:rgba(255,255,255,.93); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 13px; font-size:11px; backdrop-filter:blur(6px); z-index:10; }
+    .legend-item { display:flex; align-items:center; gap:7px; margin-bottom:5px; line-height:1.3; color:var(--text-2); }
+    .legend-item:last-child { margin-bottom:0; }
+    .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .legend-line { width:22px; height:2px; border-radius:1px; flex-shrink:0; }
+
+    /* TX MODAL */
+    .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.4); display:none; align-items:center; justify-content:center; z-index:200; backdrop-filter:blur(2px); }
+    .modal-bg.open { display:flex; }
+    .modal { background:var(--surface); border-radius:var(--radius); box-shadow:0 8px 48px rgba(0,0,0,.18); width:90%; max-width:680px; max-height:85vh; overflow:hidden; display:flex; flex-direction:column; }
+    .modal-head { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; gap:12px; }
+    .modal-title { font-size:14px; font-weight:700; }
+    .modal-hash { font-family:var(--mono); font-size:11px; color:var(--text-3); margin-top:2px; word-break:break-all; display:flex; align-items:center; gap:6px; }
+    .modal-close { margin-left:auto; cursor:pointer; font-size:22px; color:var(--text-3); background:none; border:none; padding:0 4px; line-height:1; font-family:inherit; }
+    .modal-close:hover { color:var(--text); }
+    .modal-body { padding:16px 18px; overflow-y:auto; }
+    .io-section { margin-bottom:16px; }
+    .io-title { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-3); font-weight:700; margin-bottom:7px; display:flex; align-items:center; gap:6px; }
+    .io-item { display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--surface2); border-radius:var(--radius-xs); margin-bottom:5px; transition:background .12s; }
+    .io-item.clickable { cursor:pointer; }
+    .io-item.clickable:hover { background:var(--primary-light); }
+    .io-addr { font-family:var(--mono); font-size:11px; flex:1; color:var(--primary); word-break:break-all; min-width:0; }
+    .io-val { font-weight:600; font-size:12px; white-space:nowrap; }
+    .navigate-btn { margin-left:4px; background:var(--primary); color:white; border:none; border-radius:var(--radius-xs); padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer; font-family:inherit; }
+    .navigate-btn:hover { background:var(--primary-dark); }
+    .self-tag { font-size:10px; color:var(--primary); font-weight:700; margin-left:auto; white-space:nowrap; background:var(--primary-light); padding:2px 7px; border-radius:999px; }
+
+    /* LOADER / ERROR */
+    .loader { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 24px; color:var(--text-2); gap:14px; }
+    .loader-spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin .8s linear infinite; }
+    .error-box { background:var(--danger-bg); color:var(--danger); border-radius:var(--radius-sm); padding:12px 16px; margin:12px; font-size:13px; display:flex; align-items:center; gap:8px; }
+    .error-box button { margin-left:auto; background:var(--danger); color:white; border:none; padding:4px 10px; font-size:11px; border-radius:var(--radius-xs); cursor:pointer; font-weight:600; font-family:inherit; }
+    .empty-state { padding:40px 24px; text-align:center; color:var(--text-3); font-size:13px; }
+
+    /* TOAST */
+    #toast { position:fixed; bottom:20px; right:20px; background:var(--text); color:white; border-radius:var(--radius-sm); padding:10px 16px; font-size:13px; z-index:300; transform:translateY(60px); opacity:0; transition:transform .2s,opacity .2s; pointer-events:none; box-shadow:var(--shadow); }
+    #toast.show { transform:translateY(0); opacity:1; }
+
+    /* RESPONSIVE */
+    @media (max-width: 960px) {
+      .panels { grid-template-columns: 1fr; grid-template-rows: minmax(300px,1fr) minmax(300px,1fr); }
+      header { padding: 0 14px; gap: 10px; }
+      .logo span { display: none; }
+      .search-wrap { max-width: none; }
+      .stats-row { padding: 8px 12px; }
+      .stat-card { min-width: 110px; padding: 6px 10px; }
+    }
+    @media (max-width: 560px) {
+      .panels { padding: 10px; gap: 10px; }
+      .chain-badge { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" data-act="home" title="На главную">
+    <svg viewBox="0 0 26 26" fill="none">
+      <rect width="26" height="26" rx="7" fill="currentColor" opacity=".14"/>
+      <circle cx="6" cy="13" r="3" fill="currentColor"/>
+      <circle cx="20" cy="7" r="3" fill="currentColor"/>
+      <circle cx="20" cy="19" r="3" fill="currentColor"/>
+      <line x1="9" y1="11.5" x2="17.2" y2="8.3" stroke="currentColor" stroke-width="1.6"/>
+      <line x1="9" y1="14.5" x2="17.2" y2="17.7" stroke="currentColor" stroke-width="1.6"/>
+    </svg>
+    <span>CryptoTrace</span>
+  </a>
+  <div class="search-wrap">
+    <div class="chain-badge" id="chain-badge" style="display:none"></div>
+    <input class="search-input" id="header-addr" type="text" placeholder="Адрес кошелька… (Ctrl+K)" autocomplete="off" spellcheck="false">
+    <button class="btn btn-primary" data-act="search">Найти</button>
+  </div>
+  <div class="header-r" id="header-r" style="display:none">
+    <button class="btn btn-ghost btn-sm" data-act="csv" title="Экспорт CSV">⬇ CSV</button>
+    <button class="btn btn-ghost btn-sm" data-act="clear" title="Начать заново">↻</button>
+  </div>
+</header>
+
+<!-- LANDING -->
+<div id="landing">
+  <div class="landing-icon">
+    <svg viewBox="0 0 40 40" fill="none">
+      <circle cx="8" cy="20" r="5" fill="currentColor" opacity=".8"/>
+      <circle cx="32" cy="10" r="5" fill="currentColor"/>
+      <circle cx="32" cy="30" r="5" fill="currentColor" opacity=".6"/>
+      <line x1="13" y1="18" x2="27" y2="12" stroke="currentColor" stroke-width="2"/>
+      <line x1="13" y1="22" x2="27" y2="28" stroke="currentColor" stroke-width="2"/>
+    </svg>
+  </div>
+  <h1 class="landing-title">CryptoTrace</h1>
+  <p class="landing-sub">Отматывайте транзакции по цепочке вперёд и назад. Нажимайте <b>+</b> и <b>−</b> на узлах графа, чтобы раскрывать связи. Кликайте по любому кошельку — таблица покажет все его транзакции.</p>
+  <div class="landing-search">
+    <input class="search-input" id="landing-addr" type="text" placeholder="Введите адрес кошелька…" autocomplete="off" spellcheck="false">
+    <button class="btn btn-primary" data-act="search-landing">Исследовать →</button>
+  </div>
+  <div class="examples">
+    <span style="font-size:12px;color:var(--text-3);margin-right:4px">Примеры:</span>
+    <span class="chip" data-example="ltc1q9py8chx3lxah9mqkly4sp2ht5mhgrnxy0w7ey2">ltc1q9py8…ey2 (LTC)</span>
+    <span class="chip" data-example="ltc1qvdrylxe37etpsxetx7yte2lh5ppv6k68g22fhh">ltc1qvdr…fhh (LTC)</span>
+    <span class="chip" data-example="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa">1A1zP1…fNa (BTC)</span>
+  </div>
+  <div class="landing-hint">
+    <span><kbd>Ctrl</kbd>+<kbd>K</kbd> — фокус на поиск</span>
+    <span><kbd>Esc</kbd> — закрыть модальное</span>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- Stats bar -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card"><div class="stat-label">Баланс</div><div class="stat-value" id="s-balance">—</div><div class="stat-sub" id="s-bal-usd"></div></div>
+    <div class="stat-divider"></div>
+    <div class="stat-card"><div class="stat-label">Получено</div><div class="stat-value" id="s-received">—</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat-card"><div class="stat-label">Отправлено</div><div class="stat-value" id="s-spent">—</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat-card"><div class="stat-label">Транзакций</div><div class="stat-value" id="s-txcount">—</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat-card"><div class="stat-label">Первая / Последняя активность</div><div class="stat-value" id="s-dates" style="font-size:12px">—</div></div>
+  </div>
+
+  <div class="panels">
+    <!-- TABLE -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Транзакции</span>
+        <span class="badge" id="tx-badge">0</span>
+        <div class="panel-actions">
+          <button class="btn btn-ghost btn-sm" data-act="csv" title="Экспорт в CSV">⬇ CSV</button>
+        </div>
+      </div>
+      <div class="active-bar" id="active-bar" style="display:none">
+        <span class="active-bar-label">Кошелёк:</span>
+        <span class="active-bar-addr" id="active-bar-addr"></span>
+        <button class="icon-btn" data-act="copy" title="Копировать адрес">⎘</button>
+        <button class="icon-btn" data-act="back-to-root" title="Вернуться к целевому">⌂</button>
+      </div>
+      <div class="filters" id="filters" style="display:none">
+        <span style="color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:10px">Фильтр:</span>
+        <span class="filter-chip active" data-filter="all">Все</span>
+        <span class="filter-chip" data-filter="in">↓ Входящие</span>
+        <span class="filter-chip" data-filter="out">↑ Исходящие</span>
+      </div>
+      <div id="tbl-loader" class="loader" style="display:none"><div class="loader-spinner"></div><div>Загрузка…</div></div>
+      <div id="tbl-error" class="error-box" style="display:none"></div>
+      <div class="table-wrap" id="tbl-wrap">
+        <table>
+          <thead><tr><th>Дата</th><th>Тип</th><th>Сумма</th><th>Контрагент</th><th>TX</th></tr></thead>
+          <tbody id="tx-body"><tr><td colspan="5" class="empty-state">Введите адрес для начала</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination" style="display:none">
+        <div id="pg-text" style="font-size:11px;color:var(--text-2)"></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" data-act="prev" disabled>← Пред.</button>
+          <button class="btn btn-ghost btn-sm" data-act="next" disabled>След. →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRAPH -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Граф цепочки</span>
+        <span class="badge" id="graph-badge">1</span>
+        <span class="panel-hint">Кликните по узлу — загрузить транзакции</span>
+        <div class="panel-actions">
+          <button class="btn btn-ghost btn-sm" data-act="fit" title="Вписать в экран">⊡ Вписать</button>
+          <button class="btn btn-ghost btn-sm" data-act="reset-graph" title="Сбросить до целевого">⟲</button>
+        </div>
+      </div>
+      <div class="graph-body" id="graph-body">
+        <div id="graph-canvas"></div>
+        <div class="graph-legend">
+          <div class="legend-item">
+            <div style="width:16px;height:16px;border-radius:50%;border:3px solid #16a34a;background:#e8fdf0;flex-shrink:0"></div>
+            Целевой
+          </div>
+          <div class="legend-item">
+            <div style="width:16px;height:16px;border-radius:50%;border:3px solid #5b5ef4;background:#eaebff;flex-shrink:0"></div>
+            Выбранный
+          </div>
+          <div class="legend-item">
+            <div style="width:16px;height:16px;border-radius:50%;border:2.5px solid #94a3b8;background:#f1f5f9;flex-shrink:0"></div>
+            Связанный
+          </div>
+          <div class="legend-item" style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px">
+            <div class="legend-line" style="background:#22c55e"></div>Входящая
+          </div>
+          <div class="legend-item">
+            <div class="legend-line" style="background:#ef4444"></div>Исходящая
+          </div>
+          <div class="legend-item" style="margin-top:4px;border-top:1px solid var(--border);padding-top:6px">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--text-2)">
+              <b style="color:var(--primary)">−</b> назад &nbsp; <b style="color:var(--primary)">+</b> вперёд
+            </span>
+          </div>
+        </div>
+        <div class="graph-controls">
+          <button class="graph-btn" data-act="fit" title="Вписать">⊡</button>
+          <button class="graph-btn" data-act="zoom-in" title="Приблизить">+</button>
+          <button class="graph-btn" data-act="zoom-out" title="Отдалить">−</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TX MODAL -->
+<div class="modal-bg" id="tx-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div style="flex:1;min-width:0">
+        <div class="modal-title">Детали транзакции</div>
+        <div class="modal-hash">
+          <span id="modal-hash"></span>
+          <button class="icon-btn" data-act="copy-hash" title="Копировать хэш">⎘</button>
+        </div>
+      </div>
+      <button class="modal-close" data-act="close-modal">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════
+//   CONFIG
+// ═══════════════════════════════════════════════════════════════
+const CHAINS = [
+  { chain:'litecoin',     re:/^(ltc1|L|M)/,     label:'⚡ Litecoin'    },
+  { chain:'bitcoin',      re:/^(bc1|1|3)/,      label:'₿ Bitcoin'      },
+  { chain:'ethereum',     re:/^0x[a-f0-9]{40}$/i, label:'Ξ Ethereum'   },
+  { chain:'dogecoin',     re:/^D/,              label:'Ð Dogecoin'     },
+  { chain:'dash',         re:/^X/,              label:'⚡ Dash'        },
+  { chain:'bitcoin-cash', re:/^(bitcoincash:|q)/i, label:'₿ Bitcoin Cash' },
+  { chain:'zcash',        re:/^(t1|zs)/,        label:'🔒 Zcash'       },
+];
+const COIN = {
+  bitcoin:      { ticker:'BTC',  dec:1e8,  sym:'₿'  },
+  litecoin:     { ticker:'LTC',  dec:1e8,  sym:'Ł'  },
+  ethereum:     { ticker:'ETH',  dec:1e18, sym:'Ξ'  },
+  dogecoin:     { ticker:'DOGE', dec:1e8,  sym:'Ð'  },
+  dash:         { ticker:'DASH', dec:1e8,  sym:'D'  },
+  'bitcoin-cash':{ ticker:'BCH', dec:1e8,  sym:'₿' },
+  zcash:        { ticker:'ZEC',  dec:1e8,  sym:'Z'  },
+};
+const PAGE_SIZE = 50;
+
+function detectChain(addr) {
+  const a = (addr||'').trim();
+  for (const p of CHAINS) if (p.re.test(a)) return p;
+  return CHAINS[1]; // default to bitcoin
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   STATE
+// ═══════════════════════════════════════════════════════════════
+const state = {
+  chain: 'litecoin',
+  rootAddr: null,
+  activeAddr: null,
+  addrCache: {},      // `${addr}__${page}` → { txList, addrInfo }
+  txDetails: {},      // hash → tx details
+  activePage: 0,
+  activeTotal: 0,
+  activeTxList: [],
+  expanded: {},       // addr → { fwd: bool, bck: bool }
+  filter: 'all',      // 'all' | 'in' | 'out'
+};
+let network = null, gNodes = null, gEdges = null;
+let btnRafId = null;
+
+// ═══════════════════════════════════════════════════════════════
+//   HELPERS
+// ═══════════════════════════════════════════════════════════════
+const $ = (id) => document.getElementById(id);
+const escHTML = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const truncAddr = (a) => !a ? '—' : (a.length <= 16 ? a : a.slice(0, 8) + '…' + a.slice(-6));
+const truncShort = (a) => !a ? '—' : (a.length <= 12 ? a : a.slice(0, 6) + '…' + a.slice(-4));
+const fmt8 = (n) => n == null ? '—' : (n.toFixed(8).replace(/\.?0+$/,'') || '0');
+const fmt4 = (n) => n == null ? '—' : (n >= 1 ? n.toFixed(4).replace(/\.?0+$/,'') : n.toFixed(8).replace(/\.?0+$/,''));
+const fmtDate = (dt) => !dt ? '—' : dt.split(' ')[0].split('-').reverse().join('.');
+const fmtDMY = (dt) => { const [d='',t=''] = (dt||'').split(' '); return { d: d ? d.split('-').reverse().join('.') : '—', t: t || '' }; };
+
+function showToast(msg, kind='info') {
+  const el = $('toast');
+  el.textContent = msg;
+  el.style.background = kind === 'error' ? 'var(--danger)' : kind === 'success' ? 'var(--success)' : 'var(--text)';
+  el.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Скопировано в буфер', 'success');
+  } catch {
+    showToast('Не удалось скопировать', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   API
+// ═══════════════════════════════════════════════════════════════
+async function api(path) {
+  const r = await fetch(path);
+  let j = null;
+  try { j = await r.json(); } catch {}
+  if (!r.ok) throw new Error(j?.detail || `HTTP ${r.status}`);
+  return j;
+}
+
+async function loadAddr(addr, page = 0) {
+  const key = `${addr}__${page}`;
+  if (state.addrCache[key]) return state.addrCache[key];
+  const res = await api(`/api/${state.chain}/address/${encodeURIComponent(addr)}?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`);
+  const k = Object.keys(res.data || {})[0];
+  if (!k) throw new Error('Адрес не найден');
+  const data = { txList: res.data[k].transactions || [], addrInfo: res.data[k].address || {} };
+  state.addrCache[key] = data;
+  return data;
+}
+
+async function loadTx(hash) {
+  if (state.txDetails[hash]) return state.txDetails[hash];
+  const d = await api(`/api/${state.chain}/tx/${encodeURIComponent(hash)}`);
+  if (d.data?.[hash]) state.txDetails[hash] = d.data[hash];
+  return state.txDetails[hash];
+}
+
+async function batchTx(hashes) {
+  const miss = [...new Set(hashes.filter(h => h && !state.txDetails[h]))];
+  for (let i = 0; i < miss.length; i += 10) {
+    try {
+      const slice = miss.slice(i, i + 10);
+      const d = await api(`/api/${state.chain}/txs/${slice.map(encodeURIComponent).join(',')}`);
+      if (d.data) Object.assign(state.txDetails, d.data);
+    } catch (e) { /* partial ok */ }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   ENTRY POINTS
+// ═══════════════════════════════════════════════════════════════
+function goHome() {
+  $('landing').style.display = 'flex';
+  $('app').classList.remove('visible');
+  $('header-r').style.display = 'none';
+  $('chain-badge').style.display = 'none';
+  $('header-addr').value = '';
+  history.replaceState(null, '', location.pathname);
+}
+
+function doSearch()        { const a = $('header-addr').value.trim();  if (a) startSearch(a); }
+function doSearchLanding() { const a = $('landing-addr').value.trim(); if (a) startSearch(a); }
+
+async function startSearch(addr) {
+  addr = addr.trim();
+  if (!addr) { showToast('Введите адрес', 'error'); return; }
+
+  const det = detectChain(addr);
+  Object.assign(state, {
+    chain: det.chain,
+    rootAddr: addr,
+    activeAddr: addr,
+    activePage: 0,
+    activeTotal: 0,
+    activeTxList: [],
+    addrCache: {},
+    txDetails: {},
+    expanded: {},
+    filter: 'all',
+  });
+
+  $('header-addr').value = addr;
+  $('landing-addr').value = addr;
+  const badge = $('chain-badge');
+  badge.textContent = det.label;
+  badge.style.display = 'flex';
+  $('landing').style.display = 'none';
+  $('app').classList.add('visible');
+  $('header-r').style.display = 'flex';
+
+  // URL state
+  history.replaceState(null, '', `?addr=${encodeURIComponent(addr)}`);
+
+  initGraph();
+  resetGraph();
+  addNode(addr, 'root', 0);
+  updateGraphBadge();
+  scheduleBtns();
+
+  // Reset filters UI
+  document.querySelectorAll('.filter-chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.filter === 'all'));
+
+  await showAddrInTable(addr, 0, true);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   TABLE
+// ═══════════════════════════════════════════════════════════════
+async function showAddrInTable(addr, page = 0, updateStats = false) {
+  state.activeAddr = addr;
+  state.activePage = page;
+  setTblLoading(true); clearTblError();
+
+  $('active-bar-addr').textContent = addr;
+  $('active-bar').style.display = 'flex';
+  $('filters').style.display = 'flex';
+
+  // Highlight selected node
+  if (gNodes) {
+    gNodes.forEach(n => gNodes.update({ id: n.id, ...nodeStyle(n.id, n._type || 'related') }));
+  }
+
+  try {
+    const { txList, addrInfo } = await loadAddr(addr, page);
+    state.activeTotal = addrInfo.transaction_count || txList.length || 0;
+    state.activeTxList = txList;
+
+    if (updateStats || addr === state.rootAddr) renderStats(addrInfo);
+
+    // Batch-fetch counterparty details (non-blocking)
+    batchTx(txList.map(t => t.hash).filter(Boolean)).then(() => {
+      if (state.activeAddr === addr) renderTxTable();
+    });
+    renderTxTable();
+    updatePagination();
+  } catch(e) {
+    showTblError(e.message, () => showAddrInTable(addr, page, updateStats));
+  } finally {
+    setTblLoading(false);
+  }
+}
+
+function renderStats(info) {
+  const { ticker, dec } = COIN[state.chain];
+  const fmt = v => v != null ? (v/dec).toFixed(4).replace(/\.?0+$/,'') + ' ' + ticker : '—';
+  $('s-balance').textContent  = fmt(info.balance);
+  $('s-bal-usd').textContent  = info.balance_usd != null ? `≈ $${info.balance_usd.toLocaleString('en',{maximumFractionDigits:2})}` : '';
+  $('s-received').textContent = fmt(info.received);
+  $('s-spent').textContent    = fmt(info.spent);
+  $('s-txcount').textContent  = (info.transaction_count||0).toLocaleString();
+  const first = fmtDate(info.first_seen_receiving||info.first_seen_spending);
+  const last  = fmtDate(info.last_seen_spending||info.last_seen_receiving);
+  $('s-dates').textContent = first + ' → ' + last;
+}
+
+function renderTxTable() {
+  const addr = state.activeAddr;
+  const txList = state.activeTxList || [];
+  const { ticker, dec } = COIN[state.chain];
+  const tbody = $('tx-body');
+
+  // Apply filter
+  const filtered = txList.filter(tx => {
+    if (state.filter === 'in')  return tx.balance_change > 0;
+    if (state.filter === 'out') return tx.balance_change < 0;
+    return true;
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">${txList.length ? 'Нет транзакций по фильтру' : 'Нет транзакций'}</td></tr>`;
+    $('tx-badge').textContent = '0';
+    $('pagination').style.display = txList.length ? 'flex' : 'none';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(tx => {
+    const hash = tx.hash, isIn = tx.balance_change > 0;
+    const amt = Math.abs(tx.balance_change) / dec;
+    const { d, t } = fmtDMY(tx.time);
+    const details = state.txDetails[hash];
+    const cps = details ? getCPs(details, addr, isIn) : [];
+    let cpHtml;
+    if (!details) {
+      cpHtml = '<span class="spin" title="Загрузка…"></span>';
+    } else if (!cps.length) {
+      cpHtml = '<span class="text-muted">—</span>';
+    } else {
+      const shown = cps.slice(0, 2).map(a =>
+        `<span class="addr-link" data-act="select-addr" data-addr="${escHTML(a)}" title="${escHTML(a)}">${escHTML(truncAddr(a))}</span>`
+      ).join('');
+      const extra = cps.length > 2 ? `<span class="text-muted"> +${cps.length - 2}</span>` : '';
+      cpHtml = shown + extra;
+    }
+
+    return `<tr>
+      <td><div style="font-weight:600">${escHTML(d)}</div><div class="text-muted">${escHTML(t)}</div></td>
+      <td>${isIn ? '<span class="badge-in">↓ Вход.</span>' : '<span class="badge-out">↑ Исход.</span>'}</td>
+      <td><span class="${isIn?'amount-pos':'amount-neg'}">${isIn?'+':'−'}${escHTML(fmt8(amt))} ${ticker}</span></td>
+      <td>${cpHtml}</td>
+      <td><span class="tx-hash" data-act="open-tx" data-hash="${escHTML(hash)}" title="${escHTML(hash)}">${escHTML(hash.slice(0,7))}…</span></td>
+    </tr>`;
+  }).join('');
+
+  $('tx-badge').textContent = state.activeTotal.toLocaleString();
+  $('pagination').style.display = 'flex';
+}
+
+function updatePagination() {
+  const total = Math.max(1, Math.ceil(state.activeTotal / PAGE_SIZE));
+  $('pg-text').textContent = `Стр. ${state.activePage+1}/${total} · ${state.activeTotal.toLocaleString()} транзакций`;
+  document.querySelector('[data-act="prev"]').disabled = state.activePage === 0;
+  document.querySelector('[data-act="next"]').disabled = state.activePage >= total - 1;
+}
+
+async function prevPage() { if (state.activePage > 0) await showAddrInTable(state.activeAddr, state.activePage - 1); }
+async function nextPage() { await showAddrInTable(state.activeAddr, state.activePage + 1); }
+
+function setFilter(f) {
+  state.filter = f;
+  document.querySelectorAll('.filter-chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.filter === f));
+  renderTxTable();
+}
+
+function selectAddrFromTable(addr) {
+  if (!gNodes.get(addr)) {
+    const activeNode = gNodes.get(state.activeAddr);
+    const lvl = (activeNode?.level ?? 0);
+    addNode(addr, 'related', lvl);
+    updateGraphBadge();
+    scheduleBtns();
+  }
+  showAddrInTable(addr, 0, false);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   GRAPH
+// ═══════════════════════════════════════════════════════════════
+const _iconCache = {};
+function makeIcon(color, bg) {
+  const k = color + bg;
+  if (_iconCache[k]) return _iconCache[k];
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56">'
+    + `<rect x="9" y="17" width="38" height="26" rx="6" fill="${bg}"/>`
+    + `<rect x="9" y="26" width="38" height="8" fill="${color}" opacity="0.15"/>`
+    + `<rect x="13" y="21" width="11" height="7" rx="2" fill="${color}" opacity="0.4"/>`
+    + `<circle cx="37" cy="31" r="6" fill="${color}" opacity="0.22"/>`
+    + `<circle cx="37" cy="31" r="3.2" fill="${color}" opacity="0.5"/>`
+    + '</svg>';
+  _iconCache[k] = 'data:image/svg+xml;base64,' + btoa(svg);
+  return _iconCache[k];
+}
+
+function nodeStyle(addr, type) {
+  const isActive = addr === state.activeAddr;
+  const isRoot   = type === 'root';
+  const baseFont = { size:11, face:'system-ui,sans-serif', vadjust:6, strokeWidth:4, strokeColor:'#f0f4f8' };
+
+  if (isRoot && !isActive) {
+    return {
+      shape:'circularImage', image: makeIcon('#16a34a', '#e8fdf0'),
+      size: 30, borderWidth: 4,
+      color: { background:'#e8fdf0', border:'#16a34a',
+               highlight:{ background:'#d1fae5', border:'#15803d' },
+               hover:{ background:'#e8fdf0', border:'#15803d' } },
+      font: { ...baseFont, color:'#15803d', bold:true },
+      shapeProperties: { useBorderWithImage:true, interpolation:false },
+    };
+  }
+  if (isActive) {
+    return {
+      shape:'circularImage', image: makeIcon('#5b5ef4', '#eaebff'),
+      size: 30, borderWidth: 4,
+      color: { background:'#eaebff', border:'#5b5ef4',
+               highlight:{ background:'#dde0ff', border:'#4548d4' },
+               hover:{ background:'#eaebff', border:'#4548d4' } },
+      font: { ...baseFont, color:'#4548d4', bold:true },
+      shapeProperties: { useBorderWithImage:true, interpolation:false },
+    };
+  }
+  return {
+    shape:'circularImage', image: makeIcon('#64748b', '#f1f5f9'),
+    size: 22, borderWidth: 3,
+    color: { background:'#f1f5f9', border:'#94a3b8',
+             highlight:{ background:'#e2e8f0', border:'#64748b' },
+             hover:{ background:'#e8edf5', border:'#64748b' } },
+    font: { ...baseFont, color:'#475569' },
+    shapeProperties: { useBorderWithImage:true, interpolation:false },
+  };
+}
+
+function initGraph() {
+  if (network) return;
+  gNodes = new vis.DataSet();
+  gEdges = new vis.DataSet();
+  network = new vis.Network($('graph-canvas'), { nodes: gNodes, edges: gEdges }, {
+    nodes: {
+      shapeProperties: { useBorderWithImage:true, interpolation:false },
+      font: { size:11, face:'system-ui,sans-serif' },
+      borderWidthSelected: 5,
+      shadow: { enabled:true, color:'rgba(0,0,0,.13)', size:16, x:0, y:5 },
+      labelHighlightBold: false,
+    },
+    edges: {
+      arrows: { to: { enabled:true, scaleFactor:0.65, type:'arrow' } },
+      font: { size:11, color:'#334155', face:'system-ui,sans-serif', background:'rgba(255,255,255,0.92)', strokeWidth:0, align:'middle' },
+      width: 2.2,
+      color: { inherit:false, opacity:0.88 },
+      smooth: { type:'cubicBezier', forceDirection:'horizontal', roundness:0.4 },
+      selectionWidth: 1,
+    },
+    layout: {
+      hierarchical: {
+        enabled:true, direction:'LR', sortMethod:'directed',
+        levelSeparation:260, nodeSpacing:110, treeSpacing:200,
+        blockShifting:true, edgeMinimization:true, parentCentralization:true,
+      },
+    },
+    physics: { enabled:false },
+    interaction: { hover:true, tooltipDelay:400, zoomView:true, navigationButtons:false },
+  });
+
+  network.on('click', (params) => {
+    if (params.nodes.length > 0) {
+      showAddrInTable(params.nodes[0], 0, params.nodes[0] === state.rootAddr);
+    }
+  });
+
+  // Redraw overlay buttons on every frame — keeps HTML overlay perfectly in sync
+  // with the canvas during drag, zoom, and animation.
+  network.on('afterDrawing', renderNodeBtns);
+}
+
+function resetGraph() {
+  if (gNodes) { gNodes.clear(); gEdges.clear(); }
+  clearNodeBtns();
+}
+
+function resetGraphToRoot() {
+  if (!state.rootAddr) return;
+  resetGraph();
+  state.expanded = {};
+  addNode(state.rootAddr, 'root', 0);
+  updateGraphBadge();
+  scheduleBtns();
+  showAddrInTable(state.rootAddr, 0, true);
+}
+
+function addNode(addr, type, level) {
+  if (gNodes.get(addr)) return;
+  gNodes.add({
+    id: addr,
+    label: truncShort(addr),
+    title: addr,
+    level,
+    _type: type,
+    ...nodeStyle(addr, type),
+  });
+}
+
+function addOrUpdateEdge(from, to, amt, hash, isIncoming) {
+  const eid = `${from}→${to}`;
+  const { dec, sym, ticker } = COIN[state.chain];
+  const symbol = sym || ticker;
+  const existing = gEdges.get(eid);
+  if (existing) {
+    const newHashes = existing._hashes.includes(hash) ? existing._hashes : [...existing._hashes, hash];
+    const newTotal = existing._total + amt;
+    gEdges.update({
+      id: eid,
+      _hashes: newHashes,
+      _total: newTotal,
+      label: newHashes.length > 1
+        ? `${symbol} ${fmt4(newTotal/dec)} · ${newHashes.length} tx`
+        : `${symbol} ${fmt4(newTotal/dec)}`,
+    });
+  } else {
+    gEdges.add({
+      id: eid, from, to,
+      _hashes: [hash], _total: amt,
+      label: `${symbol} ${fmt4(amt/dec)}`,
+      color: { color: isIncoming ? '#22c55e' : '#ef4444', highlight:'#5b5ef4', hover:'#5b5ef4', opacity:0.9 },
+    });
+  }
+}
+
+function updateGraphBadge() {
+  $('graph-badge').textContent = gNodes ? gNodes.length : 0;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   GRAPH EXPANSION (+/-)
+// ═══════════════════════════════════════════════════════════════
+async function expandForward(addr) {
+  if (state.expanded[addr]?.fwd) return;
+  setBtnLoading(addr, 'fwd', true);
+  try {
+    const node = gNodes.get(addr);
+    const level = node?.level ?? 0;
+    const { txList } = await loadAddr(addr, 0);
+    await batchTx(txList.map(t => t.hash).filter(Boolean));
+
+    let added = 0;
+    txList.filter(tx => tx.balance_change < 0).forEach(tx => {
+      const det = state.txDetails[tx.hash]; if (!det) return;
+      getCPs(det, addr, false).forEach(cp => {
+        if (!gNodes.get(cp)) { addNode(cp, 'related', level + 1); added++; }
+        addOrUpdateEdge(addr, cp, Math.abs(tx.balance_change), tx.hash, false);
+      });
+    });
+
+    state.expanded[addr] = { ...(state.expanded[addr]||{}), fwd:true };
+    if (!added) showToast('Нет исходящих транзакций');
+    updateGraphBadge();
+    scheduleBtns();
+    setTimeout(fitGraph, 350);
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'error');
+  } finally {
+    setBtnLoading(addr, 'fwd', false);
+  }
+}
+
+async function expandBack(addr) {
+  if (state.expanded[addr]?.bck) return;
+  setBtnLoading(addr, 'bck', true);
+  try {
+    const node = gNodes.get(addr);
+    const level = node?.level ?? 0;
+    const { txList } = await loadAddr(addr, 0);
+    await batchTx(txList.map(t => t.hash).filter(Boolean));
+
+    let added = 0;
+    txList.filter(tx => tx.balance_change > 0).forEach(tx => {
+      const det = state.txDetails[tx.hash]; if (!det) return;
+      getCPs(det, addr, true).forEach(cp => {
+        if (!gNodes.get(cp)) { addNode(cp, 'related', level - 1); added++; }
+        addOrUpdateEdge(cp, addr, Math.abs(tx.balance_change), tx.hash, true);
+      });
+    });
+
+    state.expanded[addr] = { ...(state.expanded[addr]||{}), bck:true };
+    if (!added) showToast('Нет входящих транзакций');
+    updateGraphBadge();
+    scheduleBtns();
+    setTimeout(fitGraph, 350);
+  } catch(e) {
+    showToast('Ошибка: ' + e.message, 'error');
+  } finally {
+    setBtnLoading(addr, 'bck', false);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   NODE BUTTON OVERLAY
+// ═══════════════════════════════════════════════════════════════
+function scheduleBtns() {
+  if (btnRafId) cancelAnimationFrame(btnRafId);
+  btnRafId = requestAnimationFrame(renderNodeBtns);
+}
+
+function clearNodeBtns() {
+  document.querySelectorAll('.node-btns').forEach(el => el.remove());
+}
+
+function renderNodeBtns() {
+  if (!network || !gNodes) return;
+  clearNodeBtns();
+  const body = $('graph-body');
+  const scale = network.getScale();
+  const bodyRect = body.getBoundingClientRect();
+
+  gNodes.forEach(node => {
+    const addr = node.id;
+    const domPos = network.canvasToDOM(network.getPosition(addr));
+    // Skip if node is outside viewport (with margin)
+    if (domPos.x < -60 || domPos.x > bodyRect.width + 60) return;
+    if (domPos.y < -60 || domPos.y > bodyRect.height + 60) return;
+
+    const r = (node.size || 18) * scale;
+    const g = document.createElement('div');
+    g.className = 'node-btns';
+    g.style.left = domPos.x + 'px';
+    g.style.top  = (domPos.y - r - 30) + 'px';
+
+    const fwdDone = state.expanded[addr]?.fwd;
+    const bckDone = state.expanded[addr]?.bck;
+
+    g.innerHTML = `
+      <button class="gnb bck ${bckDone?'done':''}" data-addr="${escHTML(addr)}" data-dir="bck" title="Назад: кто прислал">${bckDone?'✓':'−'}</button>
+      <button class="gnb fwd ${fwdDone?'done':''}" data-addr="${escHTML(addr)}" data-dir="fwd" title="Вперёд: куда отправил">${fwdDone?'✓':'+'}</button>
+    `;
+    body.appendChild(g);
+  });
+}
+
+function setBtnLoading(addr, dir, loading) {
+  const btn = document.querySelector(`.gnb[data-addr="${CSS.escape(addr)}"][data-dir="${dir}"]`);
+  if (!btn) return;
+  if (loading) { btn.classList.add('loading'); btn.textContent = '…'; }
+  else { btn.classList.remove('loading'); btn.textContent = dir === 'fwd' ? '+' : '−'; }
+}
+
+function fitGraph() { if (network) network.fit({ animation: { duration:400, easingFunction:'easeOutQuad' } }); }
+function zoomIn()   { if (network) { network.moveTo({ scale: network.getScale()*1.3 }); scheduleBtns(); } }
+function zoomOut()  { if (network) { network.moveTo({ scale: network.getScale()/1.3 }); scheduleBtns(); } }
+
+// ═══════════════════════════════════════════════════════════════
+//   TX MODAL
+// ═══════════════════════════════════════════════════════════════
+async function openTxModal(hash) {
+  $('tx-modal').classList.add('open');
+  $('modal-hash').textContent = hash;
+  $('modal-body').innerHTML = `<div class="loader"><div class="loader-spinner"></div></div>`;
+  try {
+    const details = await loadTx(hash);
+    if (!details) throw new Error('Транзакция не найдена');
+    renderTxModal(details);
+    // Refresh table to show newly fetched counterparties
+    renderTxTable();
+  } catch(e) {
+    $('modal-body').innerHTML = `<div class="error-box">⚠ ${escHTML(e.message)}</div>`;
+  }
+}
+
+function renderTxModal(details) {
+  const { ticker, dec } = COIN[state.chain];
+  const tx = details.transaction || {};
+  const me = (state.activeAddr||'').toLowerCase();
+  const fmtV = v => fmt8(v/dec) + ' ' + ticker;
+
+  const row = (addr, val, side) => {
+    const isSelf = addr && addr.toLowerCase() === me;
+    const clickable = addr && !isSelf;
+    return `<div class="io-item ${clickable?'clickable':''}" ${clickable?`data-act="select-addr-modal" data-addr="${escHTML(addr)}"`:''}>
+      <div class="io-addr">${addr ? escHTML(addr) : '<em>coinbase</em>'}</div>
+      <div class="io-val ${side==='in'?'amount-neg':'amount-pos'}">${side==='in'?'−':'+'}${escHTML(fmtV(val))}</div>
+      ${isSelf ? '<span class="self-tag">← вы</span>'
+        : clickable ? `<button class="navigate-btn" data-act="select-addr-modal" data-addr="${escHTML(addr)}">→ Открыть</button>` : ''}
+    </div>`;
+  };
+
+  const blockInfo = tx.block_id != null && tx.block_id >= 0 ? tx.block_id.toLocaleString() : 'Мемпул';
+
+  $('modal-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      <div class="stat-card" style="padding:10px;background:var(--surface2);border-radius:var(--radius-xs)"><div class="stat-label">Время</div><div style="font-size:12px;font-weight:600">${escHTML(tx.time||'—')}</div></div>
+      <div class="stat-card" style="padding:10px;background:var(--surface2);border-radius:var(--radius-xs)"><div class="stat-label">Блок</div><div style="font-size:12px;font-weight:600">${escHTML(blockInfo)}</div></div>
+      <div class="stat-card" style="padding:10px;background:var(--surface2);border-radius:var(--radius-xs)"><div class="stat-label">Комиссия</div><div style="font-size:12px;font-weight:600">${tx.fee!=null?escHTML(fmt8(tx.fee/dec)+' '+ticker):'—'}</div></div>
+    </div>
+    <div class="io-section">
+      <div class="io-title">Отправители ${details.inputs?.length ? `· ${details.inputs.length}` : ''}</div>
+      ${details.inputs?.length ? details.inputs.map(i => row(i.recipient, i.value, 'in')).join('') : '<div class="text-muted" style="padding:6px 0">Coinbase (эмиссия)</div>'}
+    </div>
+    <div class="io-section">
+      <div class="io-title">Получатели ${details.outputs?.length ? `· ${details.outputs.length}` : ''}</div>
+      ${(details.outputs||[]).map(o => row(o.recipient, o.value, 'out')).join('')}
+    </div>`;
+}
+
+function closeTxModal() { $('tx-modal').classList.remove('open'); }
+
+// ═══════════════════════════════════════════════════════════════
+//   CSV EXPORT
+// ═══════════════════════════════════════════════════════════════
+function exportCSV() {
+  const cached = state.addrCache[`${state.activeAddr}__${state.activePage}`];
+  if (!cached?.txList?.length) { showToast('Нет данных для экспорта', 'error'); return; }
+  const { ticker, dec } = COIN[state.chain];
+  const balance = (cached.addrInfo?.balance||0) / dec;
+
+  // RFC 4180 quoting + convert . → , for Russian Excel decimal
+  const q = (v) => {
+    let s = v == null ? '' : String(v);
+    if (/[";\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  };
+  const num = (n) => n === '' || n == null ? '' : String(n).replace('.', ',');
+
+  const headers = ['Кошелёк','Хэш_транзакции','Дата','Время','Тип',
+    `Сумма_${ticker}`, `Курс_${ticker}_USD`, 'Сумма_USD',
+    'Адрес_контрагента', 'Опорная_TX', `Баланс_кошелька_${ticker}`];
+
+  const rows = cached.txList.map(tx => {
+    const isIn = tx.balance_change > 0, amt = Math.abs(tx.balance_change)/dec;
+    const { d, t } = fmtDMY(tx.time);
+    const det = state.txDetails[tx.hash];
+    let price = '', usd = '', cp = '';
+    if (det) {
+      const td = det.transaction||{};
+      if (td.output_total && td.output_total_usd) {
+        const p = td.output_total_usd / (td.output_total/dec);
+        price = p.toFixed(2);
+        usd = (amt*p).toFixed(2);
+      }
+      cp = getCPs(det, state.activeAddr, isIn).join(' | ');
+    }
+    return [
+      state.activeAddr, tx.hash,
+      d === '—' ? '' : d, t,
+      isIn ? 'Входящая' : 'Исходящая',
+      num(amt.toFixed(8)), num(price), num(usd), cp,
+      isIn ? 'Да' : '',
+      num(balance.toFixed(8)),
+    ].map(q).join(';');
+  });
+
+  // UTF-8 BOM — Excel uses it to detect UTF-8 encoding. Avoid "sep=;" hint:
+  // it breaks BOM detection and Excel falls back to Windows-1251 on RU locale.
+  const csv = '\ufeff' + headers.map(q).join(';') + '\r\n' + rows.join('\r\n');
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' })),
+    download: `CryptoTrace_${truncAddr(state.activeAddr)}_${new Date().toISOString().slice(0,10)}.csv`,
+  });
+  document.body.appendChild(a); a.click(); a.remove();
+  showToast('CSV экспортирован', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   HELPERS
+// ═══════════════════════════════════════════════════════════════
+function getCPs(det, myAddr, isIn) {
+  const me = (myAddr||'').toLowerCase();
+  const arr = isIn ? (det.inputs||[]) : (det.outputs||[]);
+  return [...new Set(arr.map(x => x.recipient).filter(a => a && a.toLowerCase() !== me))];
+}
+
+function setTblLoading(v) {
+  $('tbl-loader').style.display = v ? 'flex' : 'none';
+  $('tbl-wrap').style.display   = v ? 'none' : '';
+}
+function clearTblError() { const e = $('tbl-error'); e.style.display='none'; e.innerHTML=''; }
+function showTblError(msg, retry) {
+  const e = $('tbl-error');
+  e.innerHTML = `⚠ <span>${escHTML(msg)}</span>${retry ? '<button data-act="retry">Повторить</button>' : ''}`;
+  e.style.display = 'flex';
+  $('tbl-wrap').style.display = 'none';
+  if (retry) e.querySelector('[data-act="retry"]').onclick = retry;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   EVENT DELEGATION
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('click', (e) => {
+  // Node overlay buttons (+/−)
+  const gnb = e.target.closest('.gnb[data-dir]');
+  if (gnb) {
+    e.stopPropagation();
+    const addr = gnb.dataset.addr;
+    const dir  = gnb.dataset.dir;
+    if (dir === 'fwd') expandForward(addr);
+    else               expandBack(addr);
+    return;
+  }
+
+  // Generic action buttons
+  const t = e.target.closest('[data-act]');
+  if (!t) return;
+  const act = t.dataset.act;
+  switch (act) {
+    case 'home':            goHome(); break;
+    case 'search':          doSearch(); break;
+    case 'search-landing':  doSearchLanding(); break;
+    case 'csv':             exportCSV(); break;
+    case 'clear':           if (confirm('Сбросить всё и начать заново?')) goHome(); break;
+    case 'reset-graph':     resetGraphToRoot(); break;
+    case 'fit':             fitGraph(); break;
+    case 'zoom-in':         zoomIn(); break;
+    case 'zoom-out':        zoomOut(); break;
+    case 'prev':            prevPage(); break;
+    case 'next':            nextPage(); break;
+    case 'copy':            copyToClipboard(state.activeAddr||''); break;
+    case 'copy-hash':       copyToClipboard($('modal-hash').textContent||''); break;
+    case 'back-to-root':    if (state.rootAddr) showAddrInTable(state.rootAddr, 0, true); break;
+    case 'close-modal':     closeTxModal(); break;
+    case 'select-addr':     selectAddrFromTable(t.dataset.addr); break;
+    case 'select-addr-modal': closeTxModal(); selectAddrFromTable(t.dataset.addr); break;
+    case 'open-tx':         openTxModal(t.dataset.hash); break;
+  }
+});
+
+// Chip filter clicks
+document.addEventListener('click', (e) => {
+  const chip = e.target.closest('.filter-chip[data-filter]');
+  if (chip) setFilter(chip.dataset.filter);
+  const ex = e.target.closest('[data-example]');
+  if (ex) { $('landing-addr').value = ex.dataset.example; startSearch(ex.dataset.example); }
+});
+
+// Close modal on backdrop
+$('tx-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeTxModal();
+});
+
+// Enter key in search inputs
+$('header-addr').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
+$('landing-addr').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearchLanding(); });
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeTxModal();
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    const isAppVisible = $('app').classList.contains('visible');
+    const inp = isAppVisible ? $('header-addr') : $('landing-addr');
+    inp.focus(); inp.select();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//   INIT — URL state
+// ═══════════════════════════════════════════════════════════════
+(() => {
+  const params = new URLSearchParams(location.search);
+  const addr = params.get('addr');
+  if (addr) startSearch(addr);
+})();
+</script>
+</body>
+</html>

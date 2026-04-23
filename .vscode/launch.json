@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "CryptoTrace",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
+      "env": {
+        "BLOCKCHAIR_API_KEY": "B___vBj1QWklhvz91btF0WToBnesbCxA"
+      },
+      "jinja": true,
+      "justMyCode": true
+    }
+  ]
+}
