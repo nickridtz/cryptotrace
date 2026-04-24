@@ -873,9 +873,15 @@ async function expandForward(addr) {
     let added = 0;
     txList.filter(tx => tx.balance_change < 0).forEach(tx => {
       const det = state.txDetails[tx.hash]; if (!det) return;
-      getCPs(det, addr, false).forEach(cp => {
+      // Group outputs by recipient to get the exact amount sent to each address
+      const outByAddr = {};
+      (det.outputs || []).forEach(o => {
+        if (!o.recipient || o.recipient.toLowerCase() === addr.toLowerCase()) return;
+        outByAddr[o.recipient] = (outByAddr[o.recipient] || 0) + (o.value || 0);
+      });
+      Object.entries(outByAddr).forEach(([cp, amt]) => {
         if (!gNodes.get(cp)) { addNode(cp, 'related', level + 1); added++; }
-        addOrUpdateEdge(addr, cp, Math.abs(tx.balance_change), tx.hash, false);
+        addOrUpdateEdge(addr, cp, amt, tx.hash, false);
       });
     });
 
@@ -903,9 +909,15 @@ async function expandBack(addr) {
     let added = 0;
     txList.filter(tx => tx.balance_change > 0).forEach(tx => {
       const det = state.txDetails[tx.hash]; if (!det) return;
-      getCPs(det, addr, true).forEach(cp => {
+      // Group inputs by sender to get the exact amount sent by each address
+      const inByAddr = {};
+      (det.inputs || []).forEach(i => {
+        if (!i.recipient || i.recipient.toLowerCase() === addr.toLowerCase()) return;
+        inByAddr[i.recipient] = (inByAddr[i.recipient] || 0) + (i.value || 0);
+      });
+      Object.entries(inByAddr).forEach(([cp, amt]) => {
         if (!gNodes.get(cp)) { addNode(cp, 'related', level - 1); added++; }
-        addOrUpdateEdge(cp, addr, Math.abs(tx.balance_change), tx.hash, true);
+        addOrUpdateEdge(cp, addr, amt, tx.hash, true);
       });
     });
 
