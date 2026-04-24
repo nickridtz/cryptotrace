@@ -928,13 +928,23 @@ async function expandForward(addr) {
     let added = 0;
     txList.filter(tx => tx.balance_change < 0).forEach(tx => {
       const det = state.txDetails[tx.hash]; if (!det) return;
-      // Group outputs by recipient to get the exact amount sent to each address
+
+      // Collect raw output amounts per recipient (excluding change back to self)
       const outByAddr = {};
       (det.outputs || []).forEach(o => {
         if (!o.recipient || o.recipient.toLowerCase() === addr.toLowerCase()) return;
         outByAddr[o.recipient] = (outByAddr[o.recipient] || 0) + (o.value || 0);
       });
-      Object.entries(outByAddr).forEach(([cp, amt]) => {
+
+      // Scale proportionally: the wallet only contributed |balance_change| to this tx.
+      // A tx may have many inputs from different wallets — we attribute our wallet's
+      // fair share of each output, not the full output amount.
+      const totalOut = Object.values(outByAddr).reduce((s, v) => s + v, 0);
+      const netSpent = Math.abs(tx.balance_change);
+      const scale = totalOut > 0 ? netSpent / totalOut : 1;
+
+      Object.entries(outByAddr).forEach(([cp, rawAmt]) => {
+        const amt = rawAmt * scale;
         if (!gNodes.get(cp)) { addNode(cp, 'related', level + 1); added++; }
         addOrUpdateEdge(addr, cp, amt, tx.hash, false);
       });
@@ -964,13 +974,22 @@ async function expandBack(addr) {
     let added = 0;
     txList.filter(tx => tx.balance_change > 0).forEach(tx => {
       const det = state.txDetails[tx.hash]; if (!det) return;
-      // Group inputs by sender to get the exact amount sent by each address
+
+      // Collect raw input amounts per sender (excluding self-inputs if any)
       const inByAddr = {};
       (det.inputs || []).forEach(i => {
         if (!i.recipient || i.recipient.toLowerCase() === addr.toLowerCase()) return;
         inByAddr[i.recipient] = (inByAddr[i.recipient] || 0) + (i.value || 0);
       });
-      Object.entries(inByAddr).forEach(([cp, amt]) => {
+
+      // Scale proportionally: our wallet received |balance_change|, but the tx
+      // may have had multiple outputs. Attribute each sender's proportional share.
+      const totalIn = Object.values(inByAddr).reduce((s, v) => s + v, 0);
+      const netReceived = tx.balance_change;
+      const scale = totalIn > 0 ? netReceived / totalIn : 1;
+
+      Object.entries(inByAddr).forEach(([cp, rawAmt]) => {
+        const amt = rawAmt * scale;
         if (!gNodes.get(cp)) { addNode(cp, 'related', level - 1); added++; }
         addOrUpdateEdge(cp, addr, amt, tx.hash, true);
       });
