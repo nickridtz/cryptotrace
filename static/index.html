@@ -93,6 +93,11 @@
     table { width:100%; border-collapse:collapse; font-size:12px; }
     thead { position:sticky; top:0; z-index:1; }
     th { background:var(--surface2); padding:7px 10px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-3); font-weight:700; border-bottom:1px solid var(--border); white-space:nowrap; }
+    th.sortable { cursor:pointer; user-select:none; }
+    th.sortable:hover { color:var(--primary); background:#f1f3ff; }
+    th.sort-asc::after  { content:' ↑'; color:var(--primary); }
+    th.sort-desc::after { content:' ↓'; color:var(--primary); }
+    th.sort-asc, th.sort-desc { color:var(--primary); }
     td { padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
     tr:last-child td { border-bottom:none; }
     tr:hover td { background:#fafbff; }
@@ -316,7 +321,13 @@
       <div id="tbl-error" class="error-box" style="display:none"></div>
       <div class="table-wrap" id="tbl-wrap">
         <table>
-          <thead><tr><th>Дата</th><th>Тип</th><th>Сумма</th><th>Контрагент</th><th>TX</th></tr></thead>
+          <thead><tr>
+            <th class="sortable" data-sort="date">Дата</th>
+            <th class="sortable" data-sort="type">Тип</th>
+            <th class="sortable" data-sort="amount">Сумма</th>
+            <th class="sortable" data-sort="counterparty">Контрагент</th>
+            <th>TX</th>
+          </tr></thead>
           <tbody id="tx-body"><tr><td colspan="5" class="empty-state">Введите адрес для начала</td></tr></tbody>
         </table>
       </div>
@@ -441,6 +452,8 @@ const state = {
   activeTxList: [],
   expanded: {},       // addr → { fwd: bool, bck: bool }
   filter: 'all',      // 'all' | 'in' | 'out'
+  sortCol: 'date',    // 'date' | 'type' | 'amount' | 'counterparty'
+  sortDir: 'desc',    // 'asc' | 'desc'
 };
 let network = null, gNodes = null, gEdges = null;
 let btnRafId = null;
@@ -577,6 +590,11 @@ async function startSearch(addr) {
 //   TABLE
 // ═══════════════════════════════════════════════════════════════
 async function showAddrInTable(addr, page = 0, updateStats = false) {
+  if (addr !== state.activeAddr) {
+    // Reset sort when switching wallets
+    state.sortCol = 'date';
+    state.sortDir = 'desc';
+  }
   state.activeAddr = addr;
   state.activePage = page;
   setTblLoading(true); clearTblError();
@@ -623,11 +641,46 @@ function renderStats(info) {
   $('s-dates').textContent = first + ' → ' + last;
 }
 
+function sortTxList(list) {
+  const dir = state.sortDir === 'asc' ? 1 : -1;
+  return [...list].sort((a, b) => {
+    switch (state.sortCol) {
+      case 'date':
+        return dir * ((a.time || '').localeCompare(b.time || ''));
+      case 'type':
+        // incoming (1) vs outgoing (-1)
+        return dir * ((b.balance_change > 0 ? 1 : -1) - (a.balance_change > 0 ? 1 : -1));
+      case 'amount':
+        return dir * (Math.abs(a.balance_change) - Math.abs(b.balance_change));
+      case 'counterparty': {
+        const getCP = tx => {
+          const det = state.txDetails[tx.hash];
+          if (!det) return '';
+          return getCPs(det, state.activeAddr, tx.balance_change > 0)[0] || '';
+        };
+        return dir * getCP(a).localeCompare(getCP(b));
+      }
+      default: return 0;
+    }
+  });
+}
+
+function updateSortHeaders() {
+  document.querySelectorAll('th[data-sort]').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.sort === state.sortCol) {
+      th.classList.add(state.sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
 function renderTxTable() {
   const addr = state.activeAddr;
   const txList = state.activeTxList || [];
   const { ticker, dec } = COIN[state.chain];
   const tbody = $('tx-body');
+
+  updateSortHeaders();
 
   // Apply filter
   const filtered = txList.filter(tx => {
@@ -643,7 +696,9 @@ function renderTxTable() {
     return;
   }
 
-  tbody.innerHTML = filtered.map(tx => {
+  const sorted = sortTxList(filtered);
+
+  tbody.innerHTML = sorted.map(tx => {
     const hash = tx.hash, isIn = tx.balance_change > 0;
     const amt = Math.abs(tx.balance_change) / dec;
     const { d, t } = fmtDMY(tx.time);
@@ -1161,10 +1216,25 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Chip filter clicks
+// Chip filter clicks + sort header clicks + example chips
 document.addEventListener('click', (e) => {
   const chip = e.target.closest('.filter-chip[data-filter]');
-  if (chip) setFilter(chip.dataset.filter);
+  if (chip) { setFilter(chip.dataset.filter); return; }
+
+  const th = e.target.closest('th[data-sort]');
+  if (th) {
+    const col = th.dataset.sort;
+    if (state.sortCol === col) {
+      state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      state.sortCol = col;
+      // amount — по умолчанию от большего; date — от новых; остальные — asc
+      state.sortDir = (col === 'amount') ? 'desc' : (col === 'date') ? 'desc' : 'asc';
+    }
+    renderTxTable();
+    return;
+  }
+
   const ex = e.target.closest('[data-example]');
   if (ex) { $('landing-addr').value = ex.dataset.example; startSearch(ex.dataset.example); }
 });
