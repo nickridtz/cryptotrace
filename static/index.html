@@ -342,6 +342,7 @@
     <button class="btn btn-ghost btn-sm" data-act="clear" title="Начать заново">↻</button>
   </div>
   <button class="btn btn-primary btn-sm" data-act="show-pool" title="Пул кошельков — собрать датасет">Пул</button>
+  <button class="btn btn-ghost btn-sm" data-act="open-changelog" title="Что нового">🚀 Что нового?</button>
 </header>
 
 <!-- LANDING -->
@@ -1474,6 +1475,7 @@ document.addEventListener('click', (e) => {
     case 'back-to-root':    if (state.rootAddr) showAddrInTable(state.rootAddr, 0, true); break;
     case 'close-modal':     closeTxModal(); break;
     case 'close-changelog': closeChangelog(); break;
+    case 'open-changelog':  openChangelog(); break;
     case 'select-addr':     selectAddrFromTable(t.dataset.addr); break;
     case 'select-addr-modal': closeTxModal(); selectAddrFromTable(t.dataset.addr); break;
     case 'open-tx':         openTxModal(t.dataset.hash); break;
