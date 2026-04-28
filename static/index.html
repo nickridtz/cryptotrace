@@ -207,6 +207,28 @@
     .error-box button { margin-left:auto; background:var(--danger); color:white; border:none; padding:4px 10px; font-size:11px; border-radius:var(--radius-xs); cursor:pointer; font-weight:600; font-family:inherit; }
     .empty-state { padding:40px 24px; text-align:center; color:var(--text-3); font-size:13px; }
 
+    /* CHANGELOG MODAL */
+    #changelog-modal { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:500; backdrop-filter:blur(3px); opacity:0; transition:opacity .2s; pointer-events:none; }
+    #changelog-modal.open { opacity:1; pointer-events:all; }
+    .changelog-box { background:var(--surface); border-radius:var(--radius); box-shadow:0 12px 48px rgba(0,0,0,.22); width:90%; max-width:460px; overflow:hidden; transform:translateY(16px) scale(.97); transition:transform .25s; }
+    #changelog-modal.open .changelog-box { transform:none; }
+    .changelog-head { padding:20px 22px 16px; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; gap:14px; }
+    .changelog-emoji { font-size:28px; line-height:1; flex-shrink:0; }
+    .changelog-title { font-size:16px; font-weight:800; letter-spacing:-.02em; margin-bottom:3px; }
+    .changelog-version { display:inline-block; font-size:10px; font-weight:700; background:var(--primary-light); color:var(--primary); padding:2px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.06em; }
+    .changelog-body { padding:16px 22px; max-height:340px; overflow-y:auto; }
+    .changelog-section { margin-bottom:14px; }
+    .changelog-section:last-child { margin-bottom:0; }
+    .changelog-section-title { font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:700; color:var(--text-3); margin-bottom:8px; }
+    .changelog-item { display:flex; gap:10px; align-items:baseline; padding:5px 0; border-bottom:1px solid var(--border); font-size:13px; line-height:1.5; }
+    .changelog-item:last-child { border-bottom:none; }
+    .changelog-tag { font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; white-space:nowrap; flex-shrink:0; }
+    .tag-new  { background:#dcfce7; color:#15803d; }
+    .tag-fix  { background:#fee2e2; color:#dc2626; }
+    .tag-upd  { background:#dbeafe; color:#1d4ed8; }
+    .changelog-foot { padding:14px 22px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .changelog-hint { font-size:11px; color:var(--text-3); }
+
     /* TOAST */
     #toast { position:fixed; bottom:20px; right:20px; background:var(--text); color:white; border-radius:var(--radius-sm); padding:10px 16px; font-size:13px; z-index:300; transform:translateY(60px); opacity:0; transition:transform .2s,opacity .2s; pointer-events:none; box-shadow:var(--shadow); max-width:360px; }
     #toast.show { transform:translateY(0); opacity:1; }
@@ -566,6 +588,34 @@ ltc1qvdrylxe37etpsxet…
           </table>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGELOG MODAL -->
+<div id="changelog-modal">
+  <div class="changelog-box">
+    <div class="changelog-head">
+      <div class="changelog-emoji">🚀</div>
+      <div>
+        <div class="changelog-title">Что нового в Крипта</div>
+        <span class="changelog-version">Версия 2.0</span>
+      </div>
+    </div>
+    <div class="changelog-body">
+      <div class="changelog-section">
+        <div class="changelog-section-title">Главное</div>
+        <div class="changelog-item"><span class="changelog-tag tag-new">Новое</span><span><b>Пул кошельков</b> — вставь список адресов и получи датасет всех транзакций сразу в формате CSV</span></div>
+        <div class="changelog-item"><span class="changelog-tag tag-new">Новое</span><span><b>Экспорт датасета</b> — формат CSV с суммами, курсом USD, датами и типами транзакций</span></div>
+        <div class="changelog-item"><span class="changelog-tag tag-upd">Улучшено</span><span><b>Граф транзакций</b> — кнопки + и − на каждом узле для раскрытия цепочки вперёд и назад</span></div>
+        <div class="changelog-item"><span class="changelog-tag tag-upd">Улучшено</span><span><b>Таблица</b> — сортировка по дате, типу, сумме и контрагенту</span></div>
+        <div class="changelog-item"><span class="changelog-tag tag-fix">Исправлено</span><span>Суммы на рёбрах графа теперь отражают реальную долю кошелька в транзакции (UTXO-модель)</span></div>
+        <div class="changelog-item"><span class="changelog-tag tag-fix">Исправлено</span><span>CSV-экспорт: кириллица, разделители и числа в русском формате Excel</span></div>
+      </div>
+    </div>
+    <div class="changelog-foot">
+      <span class="changelog-hint">Больше не показывать для этой версии</span>
+      <button class="btn btn-primary btn-sm" data-act="close-changelog">Понятно →</button>
     </div>
   </div>
 </div>
@@ -1423,6 +1473,7 @@ document.addEventListener('click', (e) => {
     case 'copy-hash':       copyToClipboard($('modal-hash').textContent||''); break;
     case 'back-to-root':    if (state.rootAddr) showAddrInTable(state.rootAddr, 0, true); break;
     case 'close-modal':     closeTxModal(); break;
+    case 'close-changelog': closeChangelog(); break;
     case 'select-addr':     selectAddrFromTable(t.dataset.addr); break;
     case 'select-addr-modal': closeTxModal(); selectAddrFromTable(t.dataset.addr); break;
     case 'open-tx':         openTxModal(t.dataset.hash); break;
@@ -1789,12 +1840,37 @@ function exportPoolCSV() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//   CHANGELOG
+// ═══════════════════════════════════════════════════════════════
+const CHANGELOG_VERSION = '2.0';
+
+function openChangelog() {
+  const el = $('changelog-modal');
+  el.classList.add('open');
+}
+function closeChangelog() {
+  const el = $('changelog-modal');
+  el.classList.remove('open');
+  localStorage.setItem('changelog_seen', CHANGELOG_VERSION);
+}
+
+// Close on backdrop click
+$('changelog-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeChangelog();
+});
+
+// ═══════════════════════════════════════════════════════════════
 //   INIT — URL state
 // ═══════════════════════════════════════════════════════════════
 (() => {
   const params = new URLSearchParams(location.search);
   const addr = params.get('addr');
   if (addr) startSearch(addr);
+
+  // Show changelog if user hasn't seen this version yet
+  if (localStorage.getItem('changelog_seen') !== CHANGELOG_VERSION) {
+    setTimeout(openChangelog, 400);
+  }
 })();
 </script>
 </body>
