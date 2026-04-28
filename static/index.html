@@ -208,8 +208,81 @@
     .empty-state { padding:40px 24px; text-align:center; color:var(--text-3); font-size:13px; }
 
     /* TOAST */
-    #toast { position:fixed; bottom:20px; right:20px; background:var(--text); color:white; border-radius:var(--radius-sm); padding:10px 16px; font-size:13px; z-index:300; transform:translateY(60px); opacity:0; transition:transform .2s,opacity .2s; pointer-events:none; box-shadow:var(--shadow); }
+    #toast { position:fixed; bottom:20px; right:20px; background:var(--text); color:white; border-radius:var(--radius-sm); padding:10px 16px; font-size:13px; z-index:300; transform:translateY(60px); opacity:0; transition:transform .2s,opacity .2s; pointer-events:none; box-shadow:var(--shadow); max-width:360px; }
     #toast.show { transform:translateY(0); opacity:1; }
+
+    /* CONTEXT MENU */
+    .ctx-menu { position:fixed; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); box-shadow:0 8px 32px rgba(0,0,0,.16); padding:4px; z-index:400; min-width:200px; font-size:13px; }
+    .ctx-menu button { width:100%; background:transparent; border:none; padding:8px 12px; text-align:left; cursor:pointer; border-radius:var(--radius-xs); font-family:inherit; font-size:inherit; color:var(--text); display:flex; align-items:center; gap:10px; transition:background .1s; }
+    .ctx-menu button:hover { background:var(--primary-light); color:var(--primary); }
+    .ctx-menu button.danger:hover { background:var(--danger-bg); color:var(--danger); }
+    .ctx-menu button .ico { width:16px; display:inline-flex; justify-content:center; font-size:12px; opacity:.7; }
+    .ctx-menu hr { margin:4px 0; border:none; border-top:1px solid var(--border); }
+    .ctx-menu .ctx-head { padding:6px 12px; font-family:var(--mono); font-size:11px; color:var(--text-3); border-bottom:1px solid var(--border); margin-bottom:4px; word-break:break-all; max-width:260px; }
+
+    /* NODE HOVER INFO */
+    .node-info { position:absolute; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); box-shadow:0 4px 16px rgba(0,0,0,.12); padding:10px 14px; min-width:240px; font-size:12px; z-index:25; pointer-events:none; transform:translate(-50%,0); }
+    .node-info-addr { font-family:var(--mono); font-size:11px; color:var(--primary-dark); margin-bottom:8px; word-break:break-all; line-height:1.4; }
+    .node-info-row { display:flex; justify-content:space-between; gap:12px; padding:3px 0; color:var(--text-2); }
+    .node-info-row b { color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; }
+    .node-info-hint { margin-top:6px; padding-top:6px; border-top:1px solid var(--border); font-size:10px; color:var(--text-3); text-align:center; }
+
+    /* EDGE MODAL specifics */
+    .edge-modal-head { padding:14px 18px; border-bottom:1px solid var(--border); background:var(--surface2); }
+    .edge-modal-flow { display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:12px; margin-top:6px; }
+    .edge-modal-addr { flex:1; padding:6px 10px; background:var(--surface); border-radius:var(--radius-xs); border:1px solid var(--border); word-break:break-all; color:var(--primary); }
+    .edge-modal-arrow { color:var(--text-3); font-size:18px; flex-shrink:0; }
+    .edge-tx-row { display:grid; grid-template-columns:90px 1fr auto auto; gap:10px; align-items:center; padding:9px 14px; border-bottom:1px solid var(--border); font-size:12px; }
+    .edge-tx-row:last-child { border-bottom:none; }
+    .edge-tx-row:hover { background:var(--surface2); }
+    .edge-tx-date { color:var(--text-2); font-size:11px; }
+    .edge-tx-hash { font-family:var(--mono); color:var(--primary); cursor:pointer; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .edge-tx-hash:hover { text-decoration:underline; }
+    .edge-tx-amt { font-weight:700; font-variant-numeric:tabular-nums; }
+
+    /* POOL */
+    #pool { display:none; flex-direction:column; min-height:calc(100vh - 60px); padding:28px 24px 40px; max-width:1100px; margin:0 auto; width:100%; }
+    #pool.visible { display:flex; }
+    .pool-layout { display:grid; grid-template-columns:340px 1fr; gap:24px; align-items:start; }
+    .pool-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:20px; }
+    .pool-title { font-size:18px; font-weight:800; letter-spacing:-.02em; margin-bottom:4px; }
+    .pool-sub { color:var(--text-2); font-size:13px; margin-bottom:18px; line-height:1.5; }
+    .pool-textarea { width:100%; min-height:210px; border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; font-family:var(--mono); font-size:12px; resize:vertical; background:var(--surface2); color:var(--text); outline:none; transition:border-color .15s; line-height:1.7; }
+    .pool-textarea:focus { border-color:var(--primary); background:white; }
+    .pool-textarea::placeholder { color:var(--text-3); font-family:var(--font); }
+    .pool-meta { display:flex; align-items:center; justify-content:space-between; margin:10px 0 14px; font-size:12px; color:var(--text-3); }
+    .pool-count { font-weight:700; color:var(--primary); }
+    .pool-progress { margin:14px 0 10px; }
+    .pool-progress-bar { height:6px; background:var(--border); border-radius:99px; overflow:hidden; }
+    .pool-progress-fill { height:100%; background:var(--primary); border-radius:99px; transition:width .3s; width:0%; }
+    .pool-progress-text { font-size:11px; color:var(--text-2); margin-top:6px; display:flex; justify-content:space-between; }
+    .pool-results-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:10px; }
+    .pool-results-title { font-size:15px; font-weight:700; }
+    .pool-table-wrap { overflow-x:auto; border-radius:var(--radius-sm); border:1px solid var(--border); }
+    .pool-table { width:100%; border-collapse:collapse; font-size:12px; min-width:760px; }
+    .pool-table thead th { background:var(--surface2); padding:8px 12px; text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-3); font-weight:700; border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; }
+    .pool-table thead th:hover { color:var(--primary); }
+    .pool-table thead th.psort-asc::after  { content:' ↑'; color:var(--primary); }
+    .pool-table thead th.psort-desc::after { content:' ↓'; color:var(--primary); }
+    .pool-table thead th.psort-asc, .pool-table thead th.psort-desc { color:var(--primary); background:#f1f3ff; }
+    .pool-table tbody tr { border-bottom:1px solid var(--border); transition:background .1s; }
+    .pool-table tbody tr:last-child { border-bottom:none; }
+    .pool-table tbody tr:hover { background:var(--surface2); }
+    .pool-table td { padding:9px 12px; vertical-align:middle; }
+    .pool-addr { font-family:var(--mono); font-size:11px; color:var(--primary); cursor:pointer; }
+    .pool-addr:hover { text-decoration:underline; }
+    .pool-status-ok   { color:var(--success); font-size:11px; font-weight:700; }
+    .pool-status-err  { color:var(--danger);  font-size:11px; font-weight:700; }
+    .pool-status-wait { color:var(--text-3);  font-size:11px; }
+    .pool-num { font-variant-numeric:tabular-nums; font-weight:600; }
+    .pool-num-dim { font-variant-numeric:tabular-nums; color:var(--text-2); }
+    .pool-chain-tag { font-size:10px; background:var(--primary-light); color:var(--primary); padding:2px 7px; border-radius:999px; font-weight:700; white-space:nowrap; }
+    .pool-err-msg { font-size:11px; color:var(--danger); }
+    .pool-open-btn { font-size:11px; background:var(--primary); color:white; border:none; border-radius:var(--radius-xs); padding:3px 9px; cursor:pointer; white-space:nowrap; font-family:inherit; font-weight:600; }
+    .pool-open-btn:hover { background:var(--primary-dark); }
+    .pool-empty { padding:48px; text-align:center; color:var(--text-3); font-size:13px; }
+    .pool-stats-bar { display:flex; gap:16px; flex-wrap:wrap; padding:14px 0 4px; border-top:1px solid var(--border); margin-top:14px; font-size:12px; color:var(--text-2); }
+    .pool-stats-bar b { color:var(--text); }
 
     /* RESPONSIVE */
     @media (max-width: 960px) {
@@ -249,6 +322,7 @@
     <button class="btn btn-ghost btn-sm" data-act="csv" title="Экспорт CSV">⬇ CSV</button>
     <button class="btn btn-ghost btn-sm" data-act="clear" title="Начать заново">↻</button>
   </div>
+  <button class="btn btn-ghost btn-sm" data-act="show-pool" title="Пул кошельков — собрать датасет">⊞ Пул</button>
 </header>
 
 <!-- LANDING -->
@@ -404,6 +478,134 @@
     <div class="modal-body" id="modal-body"></div>
   </div>
 </div>
+<!-- POOL -->
+<div id="pool">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap">
+    <div>
+      <h2 class="pool-title">Пул кошельков</h2>
+      <p class="pool-sub" style="margin:0">Вставьте список адресов — получите сводный датасет с балансами, объёмами и статистикой</p>
+    </div>
+    <button class="btn btn-ghost btn-sm" data-act="pool-back" style="margin-left:auto">← Назад</button>
+  </div>
+
+  <div class="pool-layout">
+    <!-- LEFT: input -->
+    <div>
+      <div class="pool-card">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:8px">Адреса кошельков</div>
+        <textarea class="pool-textarea" id="pool-input"
+          placeholder="Вставьте адреса — по одному на строку или через запятую/пробел:
+
+ltc1q9py8chx3lxah9mqk…
+ltc1qvdrylxe37etpsxet…
+1A1zP1eP5QGefi2DMPTf…"></textarea>
+        <div class="pool-meta">
+          <span>Распознано: <span class="pool-count" id="pool-addr-count">0</span> адресов</span>
+          <button class="btn btn-ghost btn-sm" id="pool-clear-btn" data-act="pool-clear">Очистить</button>
+        </div>
+        <button class="btn btn-primary" style="width:100%" data-act="pool-build" id="pool-build-btn">
+          ▶ Собрать датасет
+        </button>
+
+        <!-- Progress -->
+        <div class="pool-progress" id="pool-progress" style="display:none">
+          <div class="pool-progress-bar"><div class="pool-progress-fill" id="pool-progress-fill"></div></div>
+          <div class="pool-progress-text">
+            <span id="pool-progress-label">Загрузка…</span>
+            <span id="pool-progress-pct">0%</span>
+          </div>
+        </div>
+
+        <!-- Summary stats -->
+        <div class="pool-stats-bar" id="pool-stats-bar" style="display:none">
+          <span>✅ Успешно: <b id="pstat-ok">0</b></span>
+          <span>❌ Ошибок: <b id="pstat-err">0</b></span>
+          <span>Суммарный баланс: <b id="pstat-bal">—</b></span>
+          <span>Всего транзакций: <b id="pstat-txs">—</b></span>
+        </div>
+      </div>
+
+      <!-- Tips -->
+      <div style="margin-top:14px;font-size:12px;color:var(--text-3);line-height:1.6;padding:0 4px">
+        <b style="color:var(--text-2)">Подсказки:</b><br>
+        • Поддерживаются BTC, LTC, ETH, DOGE, DASH, BCH, ZEC<br>
+        • Дублирующиеся адреса удаляются автоматически<br>
+        • Загрузка идёт порциями, чтобы не превысить лимиты API<br>
+        • После сборки — экспорт в CSV одной кнопкой
+      </div>
+    </div>
+
+    <!-- RIGHT: results -->
+    <div>
+      <div id="pool-results-empty" class="pool-card pool-empty" style="padding:48px">
+        <div style="font-size:32px;margin-bottom:12px">📋</div>
+        <div style="font-weight:700;margin-bottom:6px;color:var(--text-2)">Датасет пуст</div>
+        <div>Введите адреса слева и нажмите «Собрать датасет»</div>
+      </div>
+
+      <div id="pool-results" style="display:none">
+        <div class="pool-results-header">
+          <div>
+            <span class="pool-results-title">Результаты</span>
+            <span class="badge" id="pool-badge" style="margin-left:8px">0</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" data-act="pool-sort-reset">Сброс сортировки</button>
+            <button class="btn btn-ghost btn-sm" data-act="pool-export">⬇ CSV</button>
+          </div>
+        </div>
+        <div class="pool-table-wrap">
+          <table class="pool-table">
+            <thead>
+              <tr>
+                <th data-psort="idx">#</th>
+                <th data-psort="addr">Адрес</th>
+                <th data-psort="chain">Сеть</th>
+                <th data-psort="balance">Баланс</th>
+                <th data-psort="received">Получено</th>
+                <th data-psort="spent">Отправлено</th>
+                <th data-psort="txcount">Транзакций</th>
+                <th data-psort="first">Первая</th>
+                <th data-psort="last">Последняя</th>
+                <th>Статус</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="pool-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDGE MODAL -->
+<div class="modal-bg" id="edge-modal">
+  <div class="modal">
+    <div class="edge-modal-head">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div class="modal-title">Транзакции между кошельками</div>
+          <div class="edge-modal-flow">
+            <span class="edge-modal-addr" id="edge-from"></span>
+            <span class="edge-modal-arrow">→</span>
+            <span class="edge-modal-addr" id="edge-to"></span>
+          </div>
+        </div>
+        <button class="modal-close" data-act="close-edge-modal">×</button>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--text-2)" id="edge-modal-summary"></div>
+    </div>
+    <div class="modal-body" id="edge-modal-body" style="padding:0"></div>
+  </div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div class="ctx-menu" id="ctx-menu" style="display:none"></div>
+
+<!-- NODE HOVER INFO -->
+<div class="node-info" id="node-info" style="display:none"></div>
+
 <div id="toast"></div>
 
 <script>
@@ -431,6 +633,7 @@ const COIN = {
   zcash:        { ticker:'ZEC',  dec:1e8,  sym:'Z'  },
 };
 const PAGE_SIZE = 50;
+const MAX_EXPAND = 15;  // Top-N counterparties per expansion click
 
 function detectChain(addr) {
   const a = (addr||'').trim();
@@ -1232,10 +1435,24 @@ document.addEventListener('click', (e) => {
     case 'select-addr':     selectAddrFromTable(t.dataset.addr); break;
     case 'select-addr-modal': closeTxModal(); selectAddrFromTable(t.dataset.addr); break;
     case 'open-tx':         openTxModal(t.dataset.hash); break;
+    // Pool
+    case 'show-pool':       showPool(); break;
+    case 'pool-back':       hidePool(); break;
+    case 'pool-build':      buildPoolDataset(); break;
+    case 'pool-clear':      $('pool-input').value = ''; updatePoolCount(); break;
+    case 'pool-export':     exportPoolCSV(); break;
+    case 'pool-sort-reset': poolState.sortCol='idx'; poolState.sortDir='asc'; renderPoolTable(); break;
+    case 'pool-open':
+      hidePool();
+      startSearch(t.dataset.addr);
+      break;
+    case 'pool-copy':
+      copyToClipboard(t.dataset.addr);
+      break;
   }
 });
 
-// Chip filter clicks + sort header clicks + example chips
+// Chip filter clicks + sort header clicks + example chips + pool sort
 document.addEventListener('click', (e) => {
   const chip = e.target.closest('.filter-chip[data-filter]');
   if (chip) { setFilter(chip.dataset.filter); return; }
@@ -1247,16 +1464,32 @@ document.addEventListener('click', (e) => {
       state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
     } else {
       state.sortCol = col;
-      // amount — по умолчанию от большего; date — от новых; остальные — asc
       state.sortDir = (col === 'amount') ? 'desc' : (col === 'date') ? 'desc' : 'asc';
     }
     renderTxTable();
     return;
   }
 
+  // Pool table sort
+  const pth = e.target.closest('.pool-table th[data-psort]');
+  if (pth) {
+    const col = pth.dataset.psort;
+    if (poolState.sortCol === col) {
+      poolState.sortDir = poolState.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      poolState.sortCol = col;
+      poolState.sortDir = ['balance','received','spent','txcount'].includes(col) ? 'desc' : 'asc';
+    }
+    renderPoolTable();
+    return;
+  }
+
   const ex = e.target.closest('[data-example]');
   if (ex) { $('landing-addr').value = ex.dataset.example; startSearch(ex.dataset.example); }
 });
+
+// Live address counter in pool textarea
+$('pool-input').addEventListener('input', updatePoolCount);
 
 // Close modal on backdrop
 $('tx-modal').addEventListener('click', (e) => {
@@ -1277,6 +1510,252 @@ document.addEventListener('keydown', (e) => {
     inp.focus(); inp.select();
   }
 });
+
+// ═══════════════════════════════════════════════════════════════
+//   POOL — multi-wallet dataset builder
+// ═══════════════════════════════════════════════════════════════
+const poolState = {
+  rows: [],          // { addr, chain, label, status, info, error }
+  sortCol: 'idx',
+  sortDir: 'asc',
+  running: false,
+};
+
+function showPool() {
+  $('landing').style.display = 'none';
+  $('app').classList.remove('visible');
+  $('pool').classList.add('visible');
+}
+function hidePool() {
+  $('pool').classList.remove('visible');
+  // Go back to wherever user was
+  if (state.rootAddr) {
+    $('app').classList.add('visible');
+  } else {
+    $('landing').style.display = 'flex';
+  }
+}
+
+// Parse textarea: split by newlines/commas/spaces, trim, deduplicate
+function parsePoolAddrs() {
+  const raw = $('pool-input').value;
+  const parts = raw.split(/[\n,\s]+/).map(s => s.trim()).filter(Boolean);
+  return [...new Set(parts)]; // deduplicate
+}
+
+function updatePoolCount() {
+  const n = parsePoolAddrs().length;
+  $('pool-addr-count').textContent = n;
+}
+
+function setPoolProgress(done, total, label) {
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+  $('pool-progress-fill').style.width = pct + '%';
+  $('pool-progress-label').textContent = label;
+  $('pool-progress-pct').textContent = pct + '%';
+}
+
+async function buildPoolDataset() {
+  if (poolState.running) return;
+  const addrs = parsePoolAddrs();
+  if (!addrs.length) { showToast('Введите хотя бы один адрес', 'error'); return; }
+
+  poolState.running = true;
+  poolState.rows = [];
+  poolState.sortCol = 'idx';
+  poolState.sortDir = 'asc';
+
+  $('pool-build-btn').disabled = true;
+  $('pool-build-btn').textContent = '⏳ Загрузка…';
+  $('pool-progress').style.display = '';
+  $('pool-results-empty').style.display = 'none';
+  $('pool-results').style.display = 'none';
+  $('pool-stats-bar').style.display = 'none';
+  setPoolProgress(0, addrs.length, 'Подготовка…');
+
+  // Init rows as pending
+  poolState.rows = addrs.map((addr, i) => ({
+    idx: i + 1, addr,
+    chain: detectChain(addr).chain,
+    label: detectChain(addr).label,
+    status: 'wait',
+    info: null, error: null,
+  }));
+
+  // Fetch in small batches (3 parallel) to be API-friendly
+  const BATCH = 3;
+  for (let i = 0; i < addrs.length; i += BATCH) {
+    const slice = poolState.rows.slice(i, i + BATCH);
+    await Promise.all(slice.map(async (row) => {
+      try {
+        const res = await api(`/api/${row.chain}/address/${encodeURIComponent(row.addr)}?limit=1&offset=0`);
+        const k = Object.keys(res.data || {})[0];
+        if (!k) throw new Error('Адрес не найден');
+        row.info   = res.data[k].address || {};
+        row.status = 'ok';
+      } catch (e) {
+        row.error  = e.message;
+        row.status = 'err';
+      }
+    }));
+    setPoolProgress(Math.min(i + BATCH, addrs.length), addrs.length,
+      `Загружено ${Math.min(i + BATCH, addrs.length)} из ${addrs.length}…`);
+    renderPoolTable();
+  }
+
+  // Show results & summary
+  $('pool-results').style.display = '';
+  $('pool-results-empty').style.display = 'none';
+  setPoolProgress(addrs.length, addrs.length, 'Готово!');
+  renderPoolSummary();
+  $('pool-stats-bar').style.display = 'flex';
+
+  $('pool-build-btn').disabled = false;
+  $('pool-build-btn').textContent = '▶ Пересобрать';
+  poolState.running = false;
+}
+
+function renderPoolSummary() {
+  const ok  = poolState.rows.filter(r => r.status === 'ok');
+  const err = poolState.rows.filter(r => r.status === 'err');
+  $('pstat-ok').textContent  = ok.length;
+  $('pstat-err').textContent = err.length;
+
+  // Aggregate by chain for balance display
+  const chainTotals = {};
+  ok.forEach(r => {
+    const { ticker, dec } = COIN[r.chain] || {};
+    if (!ticker) return;
+    const bal = (r.info?.balance || 0) / dec;
+    chainTotals[ticker] = (chainTotals[ticker] || 0) + bal;
+  });
+  const balStr = Object.entries(chainTotals)
+    .map(([t, v]) => `${fmt4(v)} ${t}`).join(' + ') || '—';
+  $('pstat-bal').textContent = balStr;
+
+  const totalTx = ok.reduce((s, r) => s + (r.info?.transaction_count || 0), 0);
+  $('pstat-txs').textContent = totalTx.toLocaleString();
+  $('pool-badge').textContent = poolState.rows.length;
+}
+
+function sortedPoolRows() {
+  const dir = poolState.sortDir === 'asc' ? 1 : -1;
+  return [...poolState.rows].sort((a, b) => {
+    const col = poolState.sortCol;
+    const { dec: decA } = COIN[a.chain] || { dec: 1e8 };
+    const { dec: decB } = COIN[b.chain] || { dec: 1e8 };
+    switch (col) {
+      case 'idx':     return dir * (a.idx - b.idx);
+      case 'addr':    return dir * a.addr.localeCompare(b.addr);
+      case 'chain':   return dir * a.chain.localeCompare(b.chain);
+      case 'balance': return dir * ((a.info?.balance||0)/decA - (b.info?.balance||0)/decB);
+      case 'received':return dir * ((a.info?.received||0)/decA - (b.info?.received||0)/decB);
+      case 'spent':   return dir * ((a.info?.spent||0)/decA    - (b.info?.spent||0)/decB);
+      case 'txcount': return dir * ((a.info?.transaction_count||0) - (b.info?.transaction_count||0));
+      case 'first':   return dir * ((a.info?.first_seen_receiving||a.info?.first_seen_spending||'').localeCompare(b.info?.first_seen_receiving||b.info?.first_seen_spending||''));
+      case 'last':    return dir * ((a.info?.last_seen_spending||a.info?.last_seen_receiving||'').localeCompare(b.info?.last_seen_spending||b.info?.last_seen_receiving||''));
+      default: return 0;
+    }
+  });
+}
+
+function updatePoolSortHeaders() {
+  document.querySelectorAll('.pool-table th[data-psort]').forEach(th => {
+    th.classList.remove('psort-asc', 'psort-desc');
+    if (th.dataset.psort === poolState.sortCol) {
+      th.classList.add(poolState.sortDir === 'asc' ? 'psort-asc' : 'psort-desc');
+    }
+  });
+}
+
+function renderPoolTable() {
+  const rows = sortedPoolRows();
+  $('pool-badge').textContent = rows.length;
+  updatePoolSortHeaders();
+
+  if (!rows.length) {
+    $('pool-tbody').innerHTML = `<tr><td colspan="11" class="pool-empty">Нет данных</td></tr>`;
+    return;
+  }
+
+  $('pool-tbody').innerHTML = rows.map(row => {
+    const { ticker, dec } = COIN[row.chain] || { ticker: '?', dec: 1e8 };
+    const fmtV = v => v != null ? `${fmt4(v/dec)} ${ticker}` : '—';
+
+    const info = row.info;
+    const balance  = info ? fmtV(info.balance)  : '—';
+    const received = info ? fmtV(info.received) : '—';
+    const spent    = info ? fmtV(info.spent)    : '—';
+    const txcount  = info ? (info.transaction_count||0).toLocaleString() : '—';
+    const first    = fmtDate(info?.first_seen_receiving || info?.first_seen_spending);
+    const last     = fmtDate(info?.last_seen_spending   || info?.last_seen_receiving);
+
+    const statusHtml = row.status === 'ok'   ? '<span class="pool-status-ok">✓ OK</span>'
+                     : row.status === 'err'  ? `<span class="pool-status-err" title="${escHTML(row.error||'')}">✗ Ошибка</span>`
+                     : '<span class="pool-status-wait">⏳</span>';
+
+    const errCell = row.status === 'err'
+      ? `<td colspan="6"><span class="pool-err-msg">${escHTML(row.error||'Неизвестная ошибка')}</span></td>`
+      : `<td class="pool-num">${escHTML(balance)}</td>
+         <td class="pool-num-dim">${escHTML(received)}</td>
+         <td class="pool-num-dim">${escHTML(spent)}</td>
+         <td class="pool-num">${escHTML(txcount)}</td>
+         <td class="pool-num-dim" style="white-space:nowrap">${escHTML(first)}</td>
+         <td class="pool-num-dim" style="white-space:nowrap">${escHTML(last)}</td>`;
+
+    const openBtn = row.status === 'ok'
+      ? `<button class="pool-open-btn" data-act="pool-open" data-addr="${escHTML(row.addr)}">→ Анализ</button>` : '';
+
+    return `<tr>
+      <td style="color:var(--text-3);font-size:11px">${row.idx}</td>
+      <td><span class="pool-addr" data-act="pool-copy" data-addr="${escHTML(row.addr)}" title="${escHTML(row.addr)}">${escHTML(truncAddr(row.addr))}</span></td>
+      <td><span class="pool-chain-tag">${escHTML(row.label)}</span></td>
+      ${errCell}
+      <td>${statusHtml}</td>
+      <td>${openBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportPoolCSV() {
+  const rows = sortedPoolRows();
+  if (!rows.length) { showToast('Нет данных для экспорта', 'error'); return; }
+
+  const q = (v) => {
+    let s = v == null ? '' : String(v);
+    if (/[";\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  };
+  const num = (n) => n === '' || n == null ? '' : String(n).replace('.', ',');
+
+  const headers = ['#','Адрес','Сеть','Тикер','Баланс','Получено','Отправлено',
+    'Транзакций','Первая_активность','Последняя_активность','Статус','Ошибка'];
+
+  const csvRows = rows.map(row => {
+    const { ticker, dec } = COIN[row.chain] || { ticker: '?', dec: 1e8 };
+    const fmtRaw = v => v != null ? (v/dec) : '';
+    const info = row.info;
+    return [
+      row.idx, row.addr, row.chain, ticker,
+      num(fmtRaw(info?.balance)),
+      num(fmtRaw(info?.received)),
+      num(fmtRaw(info?.spent)),
+      info?.transaction_count ?? '',
+      fmtDate(info?.first_seen_receiving || info?.first_seen_spending),
+      fmtDate(info?.last_seen_spending   || info?.last_seen_receiving),
+      row.status === 'ok' ? 'OK' : 'Ошибка',
+      row.error || '',
+    ].map(q).join(';');
+  });
+
+  const csv = '﻿' + headers.map(q).join(';') + '\r\n' + csvRows.join('\r\n');
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' })),
+    download: `CryptoTrace_Pool_${new Date().toISOString().slice(0,10)}.csv`,
+  });
+  document.body.appendChild(a); a.click(); a.remove();
+  showToast(`CSV экспортирован: ${rows.length} адресов`, 'success');
+}
 
 // ═══════════════════════════════════════════════════════════════
 //   INIT — URL state
