@@ -1709,8 +1709,7 @@ async function buildPoolDataset() {
           }
           // Counterparty address
           const cps = getCPs(det2, addr, isIn);
-          cpAddr = cps[0] || '';
-          if (cps.length > 1) cpAddr += ` +${cps.length - 1}`;
+          cpAddr = cps.join(' | ');
         }
         if (isIn) opornaya = 'Да';
 
