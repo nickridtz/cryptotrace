@@ -336,6 +336,31 @@
     .pool-stats-bar { display:flex; gap:16px; flex-wrap:wrap; padding:14px 0 4px; border-top:1px solid var(--border); margin-top:14px; font-size:12px; color:var(--text-2); }
     .pool-stats-bar b { color:var(--text); }
 
+    /* ── SYNTH ──────────────────────────────────────────────── */
+    #synth { display:none; flex-direction:column; min-height:calc(100vh - var(--header-h)); padding:28px 24px 40px; max-width:1100px; margin:0 auto; width:100%; }
+    #synth.visible { display:flex; }
+    .synth-layout { display:grid; grid-template-columns:320px 1fr; gap:24px; align-items:start; }
+    .synth-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:22px; }
+    .synth-field { margin-bottom:14px; }
+    .synth-label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--text-3); margin-bottom:6px; }
+    .synth-select, .synth-date, .synth-number {
+      width:100%; border:1.5px solid var(--border); border-radius:var(--radius-sm);
+      padding:0 12px; height:38px; font-size:13px; font-family:var(--font);
+      background:var(--surface2); color:var(--text); outline:none;
+      transition:border-color .15s, box-shadow .15s; appearance:none;
+    }
+    .synth-select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:32px; }
+    .synth-select:focus, .synth-date:focus, .synth-number:focus { border-color:var(--primary); background:white; box-shadow:0 0 0 3px rgba(99,102,241,.1); }
+    .synth-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .synth-hint-box { background:var(--primary-light); border:1px solid #c7d2fe; border-radius:var(--radius-sm); padding:10px 14px; font-size:12px; color:var(--primary-dark); line-height:1.6; margin-top:14px; }
+    .synth-hint-box b { color:var(--primary); }
+    .synth-progress { margin:14px 0 10px; }
+    .synth-progress-bar { height:6px; background:var(--border); border-radius:99px; overflow:hidden; }
+    .synth-progress-fill { height:100%; background:var(--primary-grad); border-radius:99px; transition:width .3s; width:0%; }
+    .synth-progress-text { font-size:11px; color:var(--text-2); margin-top:6px; display:flex; justify-content:space-between; }
+    .synth-stats-bar { display:flex; gap:16px; flex-wrap:wrap; padding:14px 0 4px; border-top:1px solid var(--border); margin-top:14px; font-size:12px; color:var(--text-2); }
+    .synth-stats-bar b { color:var(--text); }
+
     /* ── RESPONSIVE ─────────────────────────────────────────── */
     @media (max-width: 960px) {
       .panels { grid-template-columns: 1fr; grid-template-rows: minmax(300px,1fr) minmax(300px,1fr); }
@@ -373,6 +398,7 @@
     <button class="btn btn-ghost btn-sm" data-act="clear" title="Начать заново">↻</button>
   </div>
   <button class="btn btn-primary btn-sm" data-act="show-pool" title="Пул кошельков — собрать датасет">Пул</button>
+  <button class="btn btn-primary btn-sm" data-act="show-synth" title="Синтетические данные по диапазону дат" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">Синтетика</button>
   <button class="btn btn-ghost btn-sm" data-act="open-changelog" title="Что нового">🚀 Что нового?</button>
 </header>
 
@@ -648,6 +674,125 @@ ltc1qvdrylxe37etpsxet…
     <div class="changelog-foot">
       <span class="changelog-hint">Больше не показывать для этой версии</span>
       <button class="btn btn-primary btn-sm" data-act="close-changelog">Понятно →</button>
+    </div>
+  </div>
+</div>
+
+<!-- SYNTH -->
+<div id="synth">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap">
+    <div>
+      <h2 class="pool-title">Синтетические данные</h2>
+      <p class="pool-sub" style="margin:0">Выберите цепочку и диапазон дат — система вытащит реальные транзакции и сформирует датасет для обучения нейросети</p>
+    </div>
+    <button class="btn btn-ghost-light btn-sm" data-act="synth-back" style="margin-left:auto">← Назад</button>
+  </div>
+
+  <div class="synth-layout">
+    <!-- LEFT: settings -->
+    <div>
+      <div class="synth-card">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:16px">Параметры генерации</div>
+
+        <div class="synth-field">
+          <label class="synth-label">Блокчейн</label>
+          <select class="synth-select" id="synth-chain">
+            <option value="litecoin">⚡ Litecoin (LTC)</option>
+            <option value="bitcoin">₿ Bitcoin (BTC)</option>
+            <option value="dogecoin">Ð Dogecoin (DOGE)</option>
+            <option value="dash">⚡ Dash (DASH)</option>
+            <option value="bitcoin-cash">₿ Bitcoin Cash (BCH)</option>
+            <option value="zcash">🔒 Zcash (ZEC)</option>
+          </select>
+        </div>
+
+        <div class="synth-field">
+          <label class="synth-label">Диапазон дат</label>
+          <div class="synth-row">
+            <div>
+              <div style="font-size:10px;color:var(--text-3);margin-bottom:4px">От</div>
+              <input class="synth-date" type="date" id="synth-from">
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--text-3);margin-bottom:4px">До</div>
+              <input class="synth-date" type="date" id="synth-to">
+            </div>
+          </div>
+        </div>
+
+        <div class="synth-field">
+          <label class="synth-label">Количество транзакций</label>
+          <select class="synth-select" id="synth-limit">
+            <option value="50">50 транзакций</option>
+            <option value="100" selected>100 транзакций</option>
+            <option value="200">200 транзакций</option>
+            <option value="500">500 транзакций</option>
+            <option value="1000">1000 транзакций</option>
+          </select>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;background:linear-gradient(135deg,#7c3aed,#a855f7)" data-act="synth-build" id="synth-build-btn">
+          ▶ Генерировать датасет
+        </button>
+
+        <div class="synth-progress" id="synth-progress" style="display:none">
+          <div class="synth-progress-bar"><div class="synth-progress-fill" id="synth-progress-fill"></div></div>
+          <div class="synth-progress-text">
+            <span id="synth-progress-label">Загрузка…</span>
+            <span id="synth-progress-pct">0%</span>
+          </div>
+        </div>
+
+        <div class="synth-stats-bar" id="synth-stats-bar" style="display:none">
+          <span>Транзакций: <b id="sstat-txs">0</b></span>
+          <span>Строк в датасете: <b id="sstat-rows">0</b></span>
+          <span>Адресов: <b id="sstat-addrs">0</b></span>
+        </div>
+      </div>
+
+      <div class="synth-hint-box" style="margin-top:14px">
+        <b>Как это работает:</b><br>
+        1. Blockchair возвращает транзакции за период<br>
+        2. Для каждой TX загружаются входы и выходы<br>
+        3. Каждый адрес-участник → отдельная строка датасета<br>
+        4. Формат совпадает с экспортом Пула
+      </div>
+    </div>
+
+    <!-- RIGHT: results -->
+    <div>
+      <div id="synth-results-empty" class="synth-card pool-empty" style="padding:48px">
+        <div style="font-size:32px;margin-bottom:12px">🧬</div>
+        <div style="font-weight:700;margin-bottom:6px;color:var(--text-2)">Датасет не сгенерирован</div>
+        <div>Задайте параметры слева и нажмите «Генерировать»</div>
+      </div>
+
+      <div id="synth-results" style="display:none">
+        <div class="pool-results-header">
+          <div>
+            <span class="pool-results-title">Датасет</span>
+            <span class="badge" id="synth-badge" style="margin-left:8px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:white">0</span>
+          </div>
+          <button class="btn btn-ghost-light btn-sm" data-act="synth-export">⬇ CSV</button>
+        </div>
+        <div class="pool-table-wrap">
+          <table class="pool-table">
+            <thead>
+              <tr>
+                <th>Кошелёк</th>
+                <th>Дата / Время</th>
+                <th>Тип</th>
+                <th>Сумма</th>
+                <th>Курс USD</th>
+                <th>Сумма USD</th>
+                <th>TX хэш</th>
+                <th>Контрагент</th>
+              </tr>
+            </thead>
+            <tbody id="synth-tbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1512,6 +1657,10 @@ document.addEventListener('click', (e) => {
     case 'open-tx':         openTxModal(t.dataset.hash); break;
     // Pool
     case 'show-pool':       showPool(); break;
+    case 'show-synth':      showSynth(); break;
+    case 'synth-back':      hideSynth(); break;
+    case 'synth-build':     buildSynthDataset(); break;
+    case 'synth-export':    exportSynthCSV(); break;
     case 'pool-back':       hidePool(); break;
     case 'pool-build':      buildPoolDataset(); break;
     case 'pool-clear':      $('pool-input').value = ''; updatePoolCount(); break;
@@ -1606,6 +1755,7 @@ const POOL_MAX_TX = 100;  // max transactions to fetch per wallet (2 pages)
 function showPool() {
   $('landing').style.display = 'none';
   $('app').classList.remove('visible');
+  $('synth').classList.remove('visible');
   $('pool').classList.add('visible');
 }
 function hidePool() {
@@ -1869,6 +2019,253 @@ function exportPoolCSV() {
   });
   document.body.appendChild(a); a.click(); a.remove();
   showToast(`CSV: ${rows.length.toLocaleString()} транзакций`, 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   SYNTH — synthetic dataset builder by date range
+// ═══════════════════════════════════════════════════════════════
+const synthState = {
+  rows: [],
+  running: false,
+};
+
+function showSynth() {
+  $('landing').style.display = 'none';
+  $('app').classList.remove('visible');
+  $('pool').classList.remove('visible');
+  $('synth').classList.add('visible');
+  // Set default dates: last 2 weeks
+  const to   = new Date();
+  const from = new Date(to - 14 * 86400000);
+  const fmt  = d => d.toISOString().slice(0, 10);
+  if (!$('synth-from').value) $('synth-from').value = fmt(from);
+  if (!$('synth-to').value)   $('synth-to').value   = fmt(to);
+}
+function hideSynth() {
+  $('synth').classList.remove('visible');
+  if (state.rootAddr) $('app').classList.add('visible');
+  else $('landing').style.display = 'flex';
+}
+
+function setSynthProgress(pct, label) {
+  $('synth-progress-fill').style.width = pct + '%';
+  $('synth-progress-label').textContent = label;
+  $('synth-progress-pct').textContent = Math.round(pct) + '%';
+}
+
+async function buildSynthDataset() {
+  if (synthState.running) return;
+
+  const chain    = $('synth-chain').value;
+  const dateFrom = $('synth-from').value;
+  const dateTo   = $('synth-to').value;
+  const total    = parseInt($('synth-limit').value) || 100;
+
+  if (!dateFrom || !dateTo) { showToast('Укажите диапазон дат', 'error'); return; }
+  if (dateFrom > dateTo)    { showToast('Дата «от» должна быть раньше «до»', 'error'); return; }
+
+  synthState.running = true;
+  synthState.rows = [];
+
+  $('synth-build-btn').disabled = true;
+  $('synth-build-btn').textContent = '⏳ Загрузка…';
+  $('synth-progress').style.display = '';
+  $('synth-results').style.display = 'none';
+  $('synth-results-empty').style.display = 'none';
+  $('synth-stats-bar').style.display = 'none';
+  setSynthProgress(0, 'Запрос транзакций…');
+
+  const { ticker, dec } = COIN[chain] || { ticker: 'COIN', dec: 1e8 };
+
+  try {
+    // ── Step 1: fetch tx hashes in date range (paginated by 100) ──
+    let allHashes = [];
+    const pages = Math.ceil(total / 100);
+    for (let p = 0; p < pages && allHashes.length < total; p++) {
+      setSynthProgress((p / pages) * 30, `Получение списка транзакций… (${allHashes.length}/${total})`);
+      try {
+        const res = await api(`/api/${chain}/transactions-range?date_from=${dateFrom}&date_to=${dateTo}&limit=100&offset=${p * 100}`);
+        const txList = res.data || [];
+        if (!txList.length) break;
+        txList.forEach(tx => { if (tx.hash) allHashes.push({ hash: tx.hash, time: tx.time || '' }); });
+        if (txList.length < 100) break;
+      } catch (e) {
+        showToast('Ошибка запроса: ' + e.message, 'error');
+        break;
+      }
+    }
+    allHashes = allHashes.slice(0, total);
+
+    if (!allHashes.length) {
+      showToast('Транзакции за этот период не найдены', 'error');
+      $('synth-results-empty').style.display = '';
+      return;
+    }
+
+    // ── Step 2: batch-fetch tx details for inputs/outputs ──
+    const BATCH = 10;
+    for (let i = 0; i < allHashes.length; i += BATCH) {
+      const pct = 30 + (i / allHashes.length) * 65;
+      setSynthProgress(pct, `Загрузка деталей TX ${i + 1}–${Math.min(i + BATCH, allHashes.length)} из ${allHashes.length}…`);
+
+      const slice = allHashes.slice(i, i + BATCH).map(t => t.hash);
+      try {
+        const d = await api(`/api/${chain}/txs/${slice.map(encodeURIComponent).join(',')}`);
+        if (!d.data) continue;
+
+        slice.forEach(hash => {
+          const det = d.data[hash];
+          if (!det) return;
+          const tx = det.transaction || {};
+          const { d: dateStr, t: timeStr } = fmtDMY(tx.time || '');
+
+          // Compute price from tx totals
+          let price = '', usdTotal = 0;
+          if (tx.output_total && tx.output_total_usd) {
+            const p = tx.output_total_usd / (tx.output_total / dec);
+            price = p.toFixed(2);
+            usdTotal = p;
+          }
+
+          // ── Outputs → Входящая для получателей ──
+          const outByAddr = {};
+          (det.outputs || []).forEach(o => {
+            if (!o.recipient) return;
+            outByAddr[o.recipient] = (outByAddr[o.recipient] || 0) + (o.value || 0);
+          });
+
+          // ── Inputs → Исходящая для отправителей ──
+          const inByAddr = {};
+          (det.inputs || []).forEach(inp => {
+            if (!inp.recipient) return;
+            inByAddr[inp.recipient] = (inByAddr[inp.recipient] || 0) + (inp.value || 0);
+          });
+
+          const allOutputAddrs = Object.keys(outByAddr);
+          const allInputAddrs  = Object.keys(inByAddr);
+
+          // Rows for each output address (received)
+          allOutputAddrs.forEach(addr => {
+            const amt = outByAddr[addr] / dec;
+            const usd = price ? (amt * usdTotal).toFixed(2) : '';
+            const cps = allInputAddrs.join(' | ');
+            synthState.rows.push({
+              wallet: addr, hash, chain, ticker,
+              date: dateStr, time: timeStr, rawTime: tx.time || '',
+              type: 'Входящая', isIn: true,
+              amt, price, usd, cpAddr: cps, opornaya: 'Да',
+              balance: '',
+            });
+          });
+
+          // Rows for each input address (sent)
+          allInputAddrs.forEach(addr => {
+            const amt = inByAddr[addr] / dec;
+            const usd = price ? (amt * usdTotal).toFixed(2) : '';
+            const cps = allOutputAddrs.join(' | ');
+            synthState.rows.push({
+              wallet: addr, hash, chain, ticker,
+              date: dateStr, time: timeStr, rawTime: tx.time || '',
+              type: 'Исходящая', isIn: false,
+              amt, price, usd, cpAddr: cps, opornaya: '',
+              balance: '',
+            });
+          });
+        });
+      } catch { /* partial ok */ }
+    }
+
+    setSynthProgress(100, 'Готово!');
+    renderSynthTable();
+    renderSynthSummary();
+    $('synth-results').style.display = '';
+    $('synth-stats-bar').style.display = 'flex';
+
+  } finally {
+    $('synth-build-btn').disabled = false;
+    $('synth-build-btn').textContent = '▶ Пересобрать';
+    synthState.running = false;
+  }
+}
+
+function renderSynthSummary() {
+  const rows = synthState.rows;
+  $('sstat-txs').textContent  = [...new Set(rows.map(r => r.hash))].length.toLocaleString();
+  $('sstat-rows').textContent = rows.length.toLocaleString();
+  $('sstat-addrs').textContent = [...new Set(rows.map(r => r.wallet))].length.toLocaleString();
+  $('synth-badge').textContent = rows.length;
+}
+
+function renderSynthTable() {
+  const rows = synthState.rows;
+  $('synth-badge').textContent = rows.length;
+  if (!rows.length) {
+    $('synth-tbody').innerHTML = `<tr><td colspan="8" class="pool-empty">Нет данных</td></tr>`;
+    return;
+  }
+
+  const preview = rows.slice(0, 200);
+  const more = rows.length - preview.length;
+
+  $('synth-tbody').innerHTML = preview.map(row => {
+    const amtClass = row.isIn ? 'amount-pos' : 'amount-neg';
+    const sign     = row.isIn ? '+' : '−';
+    const cpShort  = row.cpAddr ? (row.cpAddr.length > 60 ? row.cpAddr.slice(0, 57) + '…' : row.cpAddr) : '—';
+    return `<tr>
+      <td><span class="pool-addr" title="${escHTML(row.wallet)}">${escHTML(truncAddr(row.wallet))}</span></td>
+      <td style="white-space:nowrap"><div style="font-weight:600">${escHTML(row.date)}</div><div class="text-muted">${escHTML(row.time)}</div></td>
+      <td>${row.isIn ? '<span class="badge-in">↓ Вход.</span>' : '<span class="badge-out">↑ Исход.</span>'}</td>
+      <td class="${amtClass} pool-num">${sign}${escHTML(fmt8(row.amt))} ${escHTML(row.ticker)}</td>
+      <td class="pool-num-dim">${row.price ? escHTML(row.price) + ' $' : '—'}</td>
+      <td class="pool-num">${row.usd ? escHTML(row.usd) + ' $' : '—'}</td>
+      <td><span class="tx-hash" data-act="pool-open-tx" data-hash="${escHTML(row.hash)}" data-chain="${escHTML(row.chain)}" title="${escHTML(row.hash)}">${escHTML((row.hash||'').slice(0,8))}…</span></td>
+      <td style="font-size:11px;color:var(--text-2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHTML(row.cpAddr)}">${escHTML(cpShort)}</td>
+    </tr>`;
+  }).join('') + (more > 0
+    ? `<tr><td colspan="8" style="text-align:center;padding:10px;font-size:12px;color:var(--text-3)">Показано 200 из ${rows.length.toLocaleString()} строк — скачайте CSV для полного датасета</td></tr>`
+    : '');
+}
+
+function exportSynthCSV() {
+  const rows = synthState.rows;
+  if (!rows.length) { showToast('Нет данных для экспорта', 'error'); return; }
+
+  const q = (v) => {
+    let s = v == null ? '' : String(v);
+    if (/[";\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  };
+  const num = (n) => n === '' || n == null ? '' : String(n).replace('.', ',');
+
+  const ticker = rows[0]?.ticker || 'COIN';
+  const headers = [
+    'Кошелёк','Хэш_транзакции','Дата','Время','Тип',
+    `Сумма_${ticker}`,`Курс_${ticker}_USD`,'Сумма_USD',
+    'Адрес_контрагента','Опорная_TX',`Баланс_кошелька_${ticker}`
+  ];
+
+  const csvRows = rows.map(row => [
+    row.wallet, row.hash,
+    row.date === '—' ? '' : row.date,
+    row.time, row.type,
+    num(row.amt.toFixed(8)),
+    num(row.price),
+    num(row.usd),
+    row.cpAddr,
+    row.opornaya,
+    num(row.balance),
+  ].map(q).join(';'));
+
+  const chain    = $('synth-chain').value;
+  const dateFrom = $('synth-from').value;
+  const dateTo   = $('synth-to').value;
+  const csv = '﻿' + headers.map(q).join(';') + '\r\n' + csvRows.join('\r\n');
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' })),
+    download: `Крипта_Синтетика_${chain}_${dateFrom}_${dateTo}.csv`,
+  });
+  document.body.appendChild(a); a.click(); a.remove();
+  showToast(`CSV: ${rows.length.toLocaleString()} строк`, 'success');
 }
 
 // ═══════════════════════════════════════════════════════════════

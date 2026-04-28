@@ -71,4 +71,23 @@ async def get_stats(chain: str):
     return await blockchair(f"{chain}/stats")
 
 
+@app.get("/api/{chain}/transactions-range")
+async def get_transactions_range(
+    chain: str,
+    date_from: str,
+    date_to: str,
+    limit: int = 100,
+    offset: int = 0,
+):
+    """Fetch transactions in a date range for synthetic dataset generation."""
+    validate_chain(chain)
+    return await blockchair(
+        f"{chain}/transactions",
+        q=f"time({date_from}..{date_to}),is_coinbase(false)",
+        limit=min(limit, 100),   # Blockchair max per request
+        offset=offset,
+        s="id(desc)",
+    )
+
+
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
