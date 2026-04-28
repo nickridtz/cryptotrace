@@ -2078,20 +2078,30 @@ async function buildSynthDataset() {
   const { ticker, dec } = COIN[chain] || { ticker: 'COIN', dec: 1e8 };
 
   try {
-    // ── Step 1: fetch tx hashes in date range (paginated by 100) ──
+    // ── Step 1: split range into daily buckets, fetch evenly ──
+    // Reason: Blockchair returns newest-first within range, so a plain
+    // paginated query of a 2-week period only yields the last day.
+    // Fix: fetch perDay = ceil(total/days) from each individual day.
+    const days = [];
+    const cur = new Date(dateFrom + 'T00:00:00Z');
+    const end = new Date(dateTo   + 'T00:00:00Z');
+    while (cur <= end) {
+      days.push(cur.toISOString().slice(0, 10));
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    const perDay = Math.max(1, Math.ceil(total / days.length));
+
     let allHashes = [];
-    const pages = Math.ceil(total / 100);
-    for (let p = 0; p < pages && allHashes.length < total; p++) {
-      setSynthProgress((p / pages) * 30, `Получение списка транзакций… (${allHashes.length}/${total})`);
+    for (let di = 0; di < days.length && allHashes.length < total; di++) {
+      const day = days[di];
+      setSynthProgress((di / days.length) * 30, `День ${di + 1}/${days.length}: ${day} (собрано ${allHashes.length}/${total})`);
       try {
-        const res = await api(`/api/${chain}/transactions-range?date_from=${dateFrom}&date_to=${dateTo}&limit=100&offset=${p * 100}`);
+        const need = Math.min(perDay, total - allHashes.length, 100);
+        const res = await api(`/api/${chain}/transactions-range?date_from=${day}&date_to=${day}&limit=${need}&offset=0`);
         const txList = res.data || [];
-        if (!txList.length) break;
         txList.forEach(tx => { if (tx.hash) allHashes.push({ hash: tx.hash, time: tx.time || '' }); });
-        if (txList.length < 100) break;
       } catch (e) {
-        showToast('Ошибка запроса: ' + e.message, 'error');
-        break;
+        // skip day on error, don't abort whole process
       }
     }
     allHashes = allHashes.slice(0, total);
