@@ -2185,6 +2185,34 @@ async function buildSynthDataset() {
       } catch { /* partial ok */ }
     }
 
+    // ── Step 3: fetch balances for unique addresses ──
+    const uniqueAddrs = [...new Set(synthState.rows.map(r => r.wallet))];
+    const MAX_BAL = 300; // cap to avoid too many requests
+    const addrToFetch = uniqueAddrs.slice(0, MAX_BAL);
+    const balanceMap = {}; // addr → balance string
+
+    const BAL_BATCH = 3;
+    for (let i = 0; i < addrToFetch.length; i += BAL_BATCH) {
+      const pct = 95 + (i / addrToFetch.length) * 4;
+      setSynthProgress(pct, `Загрузка балансов… ${i + 1}–${Math.min(i + BAL_BATCH, addrToFetch.length)} из ${addrToFetch.length} адресов`);
+      const slice = addrToFetch.slice(i, i + BAL_BATCH);
+      await Promise.all(slice.map(async addr => {
+        try {
+          const res = await api(`/api/${chain}/address/${encodeURIComponent(addr)}?limit=1&offset=0`);
+          const k = Object.keys(res.data || {})[0];
+          if (k) {
+            const bal = res.data[k].address?.balance;
+            balanceMap[addr] = bal != null ? (bal / dec).toFixed(8) : '';
+          }
+        } catch { /* skip */ }
+      }));
+    }
+
+    // Apply balances back to rows
+    synthState.rows.forEach(row => {
+      if (balanceMap[row.wallet] !== undefined) row.balance = balanceMap[row.wallet];
+    });
+
     setSynthProgress(100, 'Готово!');
     renderSynthTable();
     renderSynthSummary();
