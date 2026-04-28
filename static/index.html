@@ -558,16 +558,13 @@ ltc1qvdrylxe37etpsxet…
           <table class="pool-table">
             <thead>
               <tr>
-                <th data-psort="idx">#</th>
-                <th data-psort="addr">Адрес</th>
-                <th data-psort="chain">Сеть</th>
-                <th data-psort="balance">Баланс</th>
-                <th data-psort="received">Получено</th>
-                <th data-psort="spent">Отправлено</th>
-                <th data-psort="txcount">Транзакций</th>
-                <th data-psort="first">Первая</th>
-                <th data-psort="last">Последняя</th>
-                <th>Статус</th>
+                <th data-psort="wallet">Кошелёк</th>
+                <th data-psort="date">Дата / Время</th>
+                <th data-psort="type">Тип</th>
+                <th data-psort="amount">Сумма</th>
+                <th data-psort="usd">Курс USD</th>
+                <th>Сумма USD</th>
+                <th>TX хэш</th>
                 <th></th>
               </tr>
             </thead>
@@ -1449,6 +1446,11 @@ document.addEventListener('click', (e) => {
     case 'pool-copy':
       copyToClipboard(t.dataset.addr);
       break;
+    case 'pool-open-tx':
+      // Switch chain context then open TX modal
+      state.chain = t.dataset.chain || state.chain;
+      openTxModal(t.dataset.hash);
+      break;
   }
 });
 
@@ -1512,14 +1514,16 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-//   POOL — multi-wallet dataset builder
+//   POOL — multi-wallet transaction dataset builder
 // ═══════════════════════════════════════════════════════════════
 const poolState = {
-  rows: [],          // { addr, chain, label, status, info, error }
-  sortCol: 'idx',
-  sortDir: 'asc',
+  txRows:  [],   // flat list of tx rows for display/export
+  wallets: [],   // { addr, chain, label, status, txCount, balance, error }
+  sortCol: 'date',
+  sortDir: 'desc',
   running: false,
 };
+const POOL_MAX_TX = 100;  // max transactions to fetch per wallet (2 pages)
 
 function showPool() {
   $('landing').style.display = 'none';
@@ -1528,24 +1532,18 @@ function showPool() {
 }
 function hidePool() {
   $('pool').classList.remove('visible');
-  // Go back to wherever user was
-  if (state.rootAddr) {
-    $('app').classList.add('visible');
-  } else {
-    $('landing').style.display = 'flex';
-  }
+  if (state.rootAddr) $('app').classList.add('visible');
+  else $('landing').style.display = 'flex';
 }
 
-// Parse textarea: split by newlines/commas/spaces, trim, deduplicate
 function parsePoolAddrs() {
   const raw = $('pool-input').value;
   const parts = raw.split(/[\n,\s]+/).map(s => s.trim()).filter(Boolean);
-  return [...new Set(parts)]; // deduplicate
+  return [...new Set(parts)];
 }
 
 function updatePoolCount() {
-  const n = parsePoolAddrs().length;
-  $('pool-addr-count').textContent = n;
+  $('pool-addr-count').textContent = parsePoolAddrs().length;
 }
 
 function setPoolProgress(done, total, label) {
@@ -1561,9 +1559,10 @@ async function buildPoolDataset() {
   if (!addrs.length) { showToast('Введите хотя бы один адрес', 'error'); return; }
 
   poolState.running = true;
-  poolState.rows = [];
-  poolState.sortCol = 'idx';
-  poolState.sortDir = 'asc';
+  poolState.txRows  = [];
+  poolState.wallets = [];
+  poolState.sortCol = 'date';
+  poolState.sortDir = 'desc';
 
   $('pool-build-btn').disabled = true;
   $('pool-build-btn').textContent = '⏳ Загрузка…';
@@ -1573,37 +1572,93 @@ async function buildPoolDataset() {
   $('pool-stats-bar').style.display = 'none';
   setPoolProgress(0, addrs.length, 'Подготовка…');
 
-  // Init rows as pending
-  poolState.rows = addrs.map((addr, i) => ({
-    idx: i + 1, addr,
-    chain: detectChain(addr).chain,
-    label: detectChain(addr).label,
-    status: 'wait',
-    info: null, error: null,
-  }));
+  // Process one wallet at a time (API rate-friendly)
+  for (let i = 0; i < addrs.length; i++) {
+    const addr = addrs[i];
+    const det = detectChain(addr);
+    const wallet = { addr, chain: det.chain, label: det.label,
+                     status: 'wait', txCount: 0, balance: 0, error: null };
+    poolState.wallets.push(wallet);
 
-  // Fetch in small batches (3 parallel) to be API-friendly
-  const BATCH = 3;
-  for (let i = 0; i < addrs.length; i += BATCH) {
-    const slice = poolState.rows.slice(i, i + BATCH);
-    await Promise.all(slice.map(async (row) => {
-      try {
-        const res = await api(`/api/${row.chain}/address/${encodeURIComponent(row.addr)}?limit=1&offset=0`);
-        const k = Object.keys(res.data || {})[0];
-        if (!k) throw new Error('Адрес не найден');
-        row.info   = res.data[k].address || {};
-        row.status = 'ok';
-      } catch (e) {
-        row.error  = e.message;
-        row.status = 'err';
+    setPoolProgress(i, addrs.length, `[${i+1}/${addrs.length}] ${truncAddr(addr)}…`);
+
+    try {
+      const { ticker, dec } = COIN[det.chain] || { ticker: '?', dec: 1e8 };
+
+      // Fetch up to POOL_MAX_TX transactions (2 pages of 50)
+      const pages = Math.ceil(POOL_MAX_TX / PAGE_SIZE);
+      let allTx = [], addrInfo = {};
+      for (let p = 0; p < pages; p++) {
+        try {
+          const res = await api(`/api/${det.chain}/address/${encodeURIComponent(addr)}?limit=${PAGE_SIZE}&offset=${p * PAGE_SIZE}`);
+          const k = Object.keys(res.data || {})[0];
+          if (!k) break;
+          if (p === 0) addrInfo = res.data[k].address || {};
+          const txBatch = res.data[k].transactions || [];
+          allTx = allTx.concat(txBatch);
+          if (txBatch.length < PAGE_SIZE) break; // last page
+        } catch { break; }
       }
-    }));
-    setPoolProgress(Math.min(i + BATCH, addrs.length), addrs.length,
-      `Загружено ${Math.min(i + BATCH, addrs.length)} из ${addrs.length}…`);
+
+      // Batch-fetch tx details for USD pricing
+      const hashes = allTx.map(t => t.hash).filter(Boolean);
+      // Use local txDetails cache shared with main app
+      const miss = hashes.filter(h => !state.txDetails[h]);
+      for (let j = 0; j < miss.length; j += 10) {
+        try {
+          const sl = miss.slice(j, j + 10);
+          const d = await api(`/api/${det.chain}/txs/${sl.map(encodeURIComponent).join(',')}`);
+          if (d.data) Object.assign(state.txDetails, d.data);
+        } catch { /* partial ok */ }
+      }
+
+      const balance = (addrInfo.balance || 0) / dec;
+
+      // Build one row per transaction
+      allTx.forEach(tx => {
+        const isIn = tx.balance_change > 0;
+        const amt  = Math.abs(tx.balance_change) / dec;
+        const { d, t } = fmtDMY(tx.time);
+        const det2 = state.txDetails[tx.hash];
+
+        let price = '', usd = '', cpAddr = '', opornaya = '';
+        if (det2) {
+          const td = det2.transaction || {};
+          if (td.output_total && td.output_total_usd) {
+            const p = td.output_total_usd / (td.output_total / dec);
+            price = p.toFixed(2);
+            usd   = (amt * p).toFixed(2);
+          }
+          // Counterparty address
+          const cps = getCPs(det2, addr, isIn);
+          cpAddr = cps[0] || '';
+          if (cps.length > 1) cpAddr += ` +${cps.length - 1}`;
+        }
+        if (isIn) opornaya = 'Да';
+
+        poolState.txRows.push({
+          wallet: addr, chain: det.chain, ticker,
+          hash: tx.hash,
+          date: d, time: t, rawTime: tx.time || '',
+          type: isIn ? 'Входящая' : 'Исходящая', isIn,
+          amt, amtRaw: Math.abs(tx.balance_change),
+          price, usd, cpAddr, opornaya,
+          balance: balance.toFixed(8),
+        });
+      });
+
+      wallet.status  = 'ok';
+      wallet.txCount = allTx.length;
+      wallet.balance = balance;
+    } catch (e) {
+      wallet.status = 'err';
+      wallet.error  = e.message;
+    }
+
+    setPoolProgress(i + 1, addrs.length, `Обработано ${i+1} из ${addrs.length}…`);
     renderPoolTable();
   }
 
-  // Show results & summary
   $('pool-results').style.display = '';
   $('pool-results-empty').style.display = 'none';
   setPoolProgress(addrs.length, addrs.length, 'Готово!');
@@ -1616,44 +1671,31 @@ async function buildPoolDataset() {
 }
 
 function renderPoolSummary() {
-  const ok  = poolState.rows.filter(r => r.status === 'ok');
-  const err = poolState.rows.filter(r => r.status === 'err');
+  const ok  = poolState.wallets.filter(w => w.status === 'ok');
+  const err = poolState.wallets.filter(w => w.status === 'err');
   $('pstat-ok').textContent  = ok.length;
   $('pstat-err').textContent = err.length;
+  $('pstat-txs').textContent = poolState.txRows.length.toLocaleString();
 
-  // Aggregate by chain for balance display
   const chainTotals = {};
-  ok.forEach(r => {
-    const { ticker, dec } = COIN[r.chain] || {};
+  ok.forEach(w => {
+    const { ticker } = COIN[w.chain] || {};
     if (!ticker) return;
-    const bal = (r.info?.balance || 0) / dec;
-    chainTotals[ticker] = (chainTotals[ticker] || 0) + bal;
+    chainTotals[ticker] = (chainTotals[ticker] || 0) + w.balance;
   });
-  const balStr = Object.entries(chainTotals)
+  $('pstat-bal').textContent = Object.entries(chainTotals)
     .map(([t, v]) => `${fmt4(v)} ${t}`).join(' + ') || '—';
-  $('pstat-bal').textContent = balStr;
-
-  const totalTx = ok.reduce((s, r) => s + (r.info?.transaction_count || 0), 0);
-  $('pstat-txs').textContent = totalTx.toLocaleString();
-  $('pool-badge').textContent = poolState.rows.length;
 }
 
-function sortedPoolRows() {
+function sortedPoolTxRows() {
   const dir = poolState.sortDir === 'asc' ? 1 : -1;
-  return [...poolState.rows].sort((a, b) => {
-    const col = poolState.sortCol;
-    const { dec: decA } = COIN[a.chain] || { dec: 1e8 };
-    const { dec: decB } = COIN[b.chain] || { dec: 1e8 };
-    switch (col) {
-      case 'idx':     return dir * (a.idx - b.idx);
-      case 'addr':    return dir * a.addr.localeCompare(b.addr);
-      case 'chain':   return dir * a.chain.localeCompare(b.chain);
-      case 'balance': return dir * ((a.info?.balance||0)/decA - (b.info?.balance||0)/decB);
-      case 'received':return dir * ((a.info?.received||0)/decA - (b.info?.received||0)/decB);
-      case 'spent':   return dir * ((a.info?.spent||0)/decA    - (b.info?.spent||0)/decB);
-      case 'txcount': return dir * ((a.info?.transaction_count||0) - (b.info?.transaction_count||0));
-      case 'first':   return dir * ((a.info?.first_seen_receiving||a.info?.first_seen_spending||'').localeCompare(b.info?.first_seen_receiving||b.info?.first_seen_spending||''));
-      case 'last':    return dir * ((a.info?.last_seen_spending||a.info?.last_seen_receiving||'').localeCompare(b.info?.last_seen_spending||b.info?.last_seen_receiving||''));
+  return [...poolState.txRows].sort((a, b) => {
+    switch (poolState.sortCol) {
+      case 'date':   return dir * a.rawTime.localeCompare(b.rawTime);
+      case 'wallet': return dir * a.wallet.localeCompare(b.wallet);
+      case 'type':   return dir * ((a.isIn ? 1 : -1) - (b.isIn ? 1 : -1));
+      case 'amount': return dir * (a.amt - b.amt);
+      case 'usd':    return dir * (parseFloat(a.usd||0) - parseFloat(b.usd||0));
       default: return 0;
     }
   });
@@ -1669,56 +1711,49 @@ function updatePoolSortHeaders() {
 }
 
 function renderPoolTable() {
-  const rows = sortedPoolRows();
+  const rows = sortedPoolTxRows();
   $('pool-badge').textContent = rows.length;
   updatePoolSortHeaders();
 
   if (!rows.length) {
-    $('pool-tbody').innerHTML = `<tr><td colspan="11" class="pool-empty">Нет данных</td></tr>`;
+    // Show wallet-level loading state
+    const walletLines = poolState.wallets.map(w =>
+      `<tr><td colspan="8" style="padding:8px 12px;font-size:12px;color:var(--text-2)">
+        ${w.status === 'wait' ? '⏳' : w.status === 'ok' ? '✓' : '✗'}
+        <span style="font-family:var(--mono)">${escHTML(truncAddr(w.addr))}</span>
+        ${w.status === 'err' ? `<span class="pool-err-msg"> — ${escHTML(w.error||'')}</span>` : ''}
+        ${w.status === 'ok'  ? `<span style="color:var(--text-3)"> — ${w.txCount} тр.</span>` : ''}
+      </td></tr>`
+    ).join('');
+    $('pool-tbody').innerHTML = walletLines ||
+      `<tr><td colspan="8" class="pool-empty">Нет данных</td></tr>`;
     return;
   }
 
-  $('pool-tbody').innerHTML = rows.map(row => {
-    const { ticker, dec } = COIN[row.chain] || { ticker: '?', dec: 1e8 };
-    const fmtV = v => v != null ? `${fmt4(v/dec)} ${ticker}` : '—';
+  // Show first 200 rows in table (full data in CSV)
+  const preview = rows.slice(0, 200);
+  const more = rows.length - preview.length;
 
-    const info = row.info;
-    const balance  = info ? fmtV(info.balance)  : '—';
-    const received = info ? fmtV(info.received) : '—';
-    const spent    = info ? fmtV(info.spent)    : '—';
-    const txcount  = info ? (info.transaction_count||0).toLocaleString() : '—';
-    const first    = fmtDate(info?.first_seen_receiving || info?.first_seen_spending);
-    const last     = fmtDate(info?.last_seen_spending   || info?.last_seen_receiving);
-
-    const statusHtml = row.status === 'ok'   ? '<span class="pool-status-ok">✓ OK</span>'
-                     : row.status === 'err'  ? `<span class="pool-status-err" title="${escHTML(row.error||'')}">✗ Ошибка</span>`
-                     : '<span class="pool-status-wait">⏳</span>';
-
-    const errCell = row.status === 'err'
-      ? `<td colspan="6"><span class="pool-err-msg">${escHTML(row.error||'Неизвестная ошибка')}</span></td>`
-      : `<td class="pool-num">${escHTML(balance)}</td>
-         <td class="pool-num-dim">${escHTML(received)}</td>
-         <td class="pool-num-dim">${escHTML(spent)}</td>
-         <td class="pool-num">${escHTML(txcount)}</td>
-         <td class="pool-num-dim" style="white-space:nowrap">${escHTML(first)}</td>
-         <td class="pool-num-dim" style="white-space:nowrap">${escHTML(last)}</td>`;
-
-    const openBtn = row.status === 'ok'
-      ? `<button class="pool-open-btn" data-act="pool-open" data-addr="${escHTML(row.addr)}">→ Анализ</button>` : '';
-
+  $('pool-tbody').innerHTML = preview.map(row => {
+    const amtClass = row.isIn ? 'amount-pos' : 'amount-neg';
+    const sign     = row.isIn ? '+' : '−';
     return `<tr>
-      <td style="color:var(--text-3);font-size:11px">${row.idx}</td>
-      <td><span class="pool-addr" data-act="pool-copy" data-addr="${escHTML(row.addr)}" title="${escHTML(row.addr)}">${escHTML(truncAddr(row.addr))}</span></td>
-      <td><span class="pool-chain-tag">${escHTML(row.label)}</span></td>
-      ${errCell}
-      <td>${statusHtml}</td>
-      <td>${openBtn}</td>
+      <td><span class="pool-addr" data-act="pool-copy" data-addr="${escHTML(row.wallet)}" title="${escHTML(row.wallet)}">${escHTML(truncAddr(row.wallet))}</span></td>
+      <td style="white-space:nowrap"><div style="font-weight:600">${escHTML(row.date)}</div><div class="text-muted">${escHTML(row.time)}</div></td>
+      <td>${row.isIn ? '<span class="badge-in">↓ Вход.</span>' : '<span class="badge-out">↑ Исход.</span>'}</td>
+      <td class="${amtClass} pool-num">${sign}${escHTML(fmt8(row.amt))} ${escHTML(row.ticker)}</td>
+      <td class="pool-num-dim">${row.price ? escHTML(row.price) + ' $' : '—'}</td>
+      <td class="pool-num">${row.usd ? escHTML(row.usd) + ' $' : '—'}</td>
+      <td><span class="tx-hash" data-act="pool-open-tx" data-hash="${escHTML(row.hash)}" data-chain="${escHTML(row.chain)}" title="${escHTML(row.hash)}">${escHTML((row.hash||'').slice(0,8))}…</span></td>
+      <td><button class="pool-open-btn" data-act="pool-open" data-addr="${escHTML(row.wallet)}">→ Анализ</button></td>
     </tr>`;
-  }).join('');
+  }).join('') + (more > 0
+    ? `<tr><td colspan="8" style="text-align:center;padding:10px;font-size:12px;color:var(--text-3)">Показано 200 из ${rows.length.toLocaleString()} строк — скачайте CSV для полного датасета</td></tr>`
+    : '');
 }
 
 function exportPoolCSV() {
-  const rows = sortedPoolRows();
+  const rows = sortedPoolTxRows();
   if (!rows.length) { showToast('Нет данных для экспорта', 'error'); return; }
 
   const q = (v) => {
@@ -1728,25 +1763,27 @@ function exportPoolCSV() {
   };
   const num = (n) => n === '' || n == null ? '' : String(n).replace('.', ',');
 
-  const headers = ['#','Адрес','Сеть','Тикер','Баланс','Получено','Отправлено',
-    'Транзакций','Первая_активность','Последняя_активность','Статус','Ошибка'];
+  // Detect coin ticker from first row for dynamic header
+  const ticker = rows[0]?.ticker || 'COIN';
+  const headers = [
+    'Кошелёк','Хэш_транзакции','Дата','Время','Тип',
+    `Сумма_${ticker}`,`Курс_${ticker}_USD`,'Сумма_USD',
+    'Адрес_контрагента','Опорная_TX',`Баланс_кошелька_${ticker}`
+  ];
 
-  const csvRows = rows.map(row => {
-    const { ticker, dec } = COIN[row.chain] || { ticker: '?', dec: 1e8 };
-    const fmtRaw = v => v != null ? (v/dec) : '';
-    const info = row.info;
-    return [
-      row.idx, row.addr, row.chain, ticker,
-      num(fmtRaw(info?.balance)),
-      num(fmtRaw(info?.received)),
-      num(fmtRaw(info?.spent)),
-      info?.transaction_count ?? '',
-      fmtDate(info?.first_seen_receiving || info?.first_seen_spending),
-      fmtDate(info?.last_seen_spending   || info?.last_seen_receiving),
-      row.status === 'ok' ? 'OK' : 'Ошибка',
-      row.error || '',
-    ].map(q).join(';');
-  });
+  const csvRows = rows.map(row => [
+    row.wallet,
+    row.hash,
+    row.date === '—' ? '' : row.date,
+    row.time,
+    row.type,
+    num(row.amt.toFixed(8)),
+    num(row.price),
+    num(row.usd),
+    row.cpAddr,
+    row.opornaya,
+    num(row.balance),
+  ].map(q).join(';'));
 
   const csv = '﻿' + headers.map(q).join(';') + '\r\n' + csvRows.join('\r\n');
   const a = Object.assign(document.createElement('a'), {
@@ -1754,7 +1791,7 @@ function exportPoolCSV() {
     download: `CryptoTrace_Pool_${new Date().toISOString().slice(0,10)}.csv`,
   });
   document.body.appendChild(a); a.click(); a.remove();
-  showToast(`CSV экспортирован: ${rows.length} адресов`, 'success');
+  showToast(`CSV: ${rows.length.toLocaleString()} транзакций`, 'success');
 }
 
 // ═══════════════════════════════════════════════════════════════
