@@ -657,18 +657,23 @@ ltc1qvdrylxe37etpsxet…
       <div class="changelog-emoji">🚀</div>
       <div>
         <div class="changelog-title">Что нового в Крипта</div>
-        <span class="changelog-version">Версия 2.0</span>
+        <span class="changelog-version">Версия 2.1</span>
       </div>
     </div>
     <div class="changelog-body">
       <div class="changelog-section">
-        <div class="changelog-section-title">Главное</div>
-        <div class="changelog-item"><span class="changelog-tag tag-new">Новое</span><span><b>Пул кошельков</b> — вставь список адресов и получи датасет всех транзакций сразу в формате CSV</span></div>
-        <div class="changelog-item"><span class="changelog-tag tag-new">Новое</span><span><b>Экспорт датасета</b> — формат CSV с суммами, курсом USD, датами и типами транзакций</span></div>
+        <div class="changelog-section-title">Версия 2.1 — Синтетические данные</div>
+        <div class="changelog-item"><span class="changelog-tag tag-new">Новое</span><span><b>Синтетика</b> — генерация датасета по диапазону дат: выбери цепочку, период и количество транзакций</span></div>
+        <div class="changelog-item"><span class="changelog-tag tag-new">Новое</span><span><b>Равномерная выборка</b> — транзакции берутся по одной с каждого дня периода, а не только с последнего</span></div>
+        <div class="changelog-item"><span class="changelog-tag tag-new">Новое</span><span><b>Баланс в синтетике</b> — для каждого адреса автоматически подтягивается реальный баланс кошелька</span></div>
+        <div class="changelog-item"><span class="changelog-tag tag-fix">Исправлено</span><span><b>Адрес контрагента</b> — теперь показываются все адреса через « | », без обрезки «+N»</span></div>
+      </div>
+      <div class="changelog-section">
+        <div class="changelog-section-title">Версия 2.0 — Основа</div>
+        <div class="changelog-item"><span class="changelog-tag tag-new">Новое</span><span><b>Пул кошельков</b> — вставь список адресов и получи датасет всех транзакций в формате CSV</span></div>
         <div class="changelog-item"><span class="changelog-tag tag-upd">Улучшено</span><span><b>Граф транзакций</b> — кнопки + и − на каждом узле для раскрытия цепочки вперёд и назад</span></div>
         <div class="changelog-item"><span class="changelog-tag tag-upd">Улучшено</span><span><b>Таблица</b> — сортировка по дате, типу, сумме и контрагенту</span></div>
-        <div class="changelog-item"><span class="changelog-tag tag-fix">Исправлено</span><span>Суммы на рёбрах графа теперь отражают реальную долю кошелька в транзакции (UTXO-модель)</span></div>
-        <div class="changelog-item"><span class="changelog-tag tag-fix">Исправлено</span><span>CSV-экспорт: кириллица, разделители и числа в русском формате Excel</span></div>
+        <div class="changelog-item"><span class="changelog-tag tag-fix">Исправлено</span><span>Суммы на рёбрах графа отражают реальную долю кошелька в транзакции (UTXO-модель)</span></div>
       </div>
     </div>
     <div class="changelog-foot">
@@ -2309,7 +2314,7 @@ function exportSynthCSV() {
 // ═══════════════════════════════════════════════════════════════
 //   CHANGELOG
 // ═══════════════════════════════════════════════════════════════
-const CHANGELOG_VERSION = '2.0';
+const CHANGELOG_VERSION = '2.1';
 
 function openChangelog() {
   const el = $('changelog-modal');
