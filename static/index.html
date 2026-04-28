@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CryptoTrace · Анализ цепочки транзакций</title>
+  <title>Крипта · Анализ цепочки транзакций</title>
   <script src="https://unpkg.com/vis-network@9.1.9/dist/vis-network.min.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/vis-network@9.1.9/dist/dist/vis-network.min.css">
   <style>
@@ -328,15 +328,12 @@
 <!-- LANDING -->
 <div id="landing">
   <div class="landing-icon">
-    <svg viewBox="0 0 40 40" fill="none">
-      <circle cx="8" cy="20" r="5" fill="currentColor" opacity=".8"/>
-      <circle cx="32" cy="10" r="5" fill="currentColor"/>
-      <circle cx="32" cy="30" r="5" fill="currentColor" opacity=".6"/>
-      <line x1="13" y1="18" x2="27" y2="12" stroke="currentColor" stroke-width="2"/>
-      <line x1="13" y1="22" x2="27" y2="28" stroke="currentColor" stroke-width="2"/>
+    <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+      <line x1="20" y1="4" x2="20" y2="36"/>
+      <path d="M28 10H16a6 6 0 0 0 0 12h8a6 6 0 0 1 0 12H12"/>
     </svg>
   </div>
-  <h1 class="landing-title">CryptoTrace</h1>
+  <h1 class="landing-title">Крипта</h1>
   <p class="landing-sub">Отматывайте транзакции по цепочке вперёд и назад. Нажимайте <b>+</b> и <b>−</b> на узлах графа, чтобы раскрывать связи. Кликайте по любому кошельку — таблица покажет все его транзакции.</p>
   <div class="landing-search">
     <input class="search-input" id="landing-addr" type="text" placeholder="Введите адрес кошелька…" autocomplete="off" spellcheck="false">
@@ -1366,7 +1363,7 @@ function exportCSV() {
   const csv = '\ufeff' + headers.map(q).join(';') + '\r\n' + rows.join('\r\n');
   const a = Object.assign(document.createElement('a'), {
     href: URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' })),
-    download: `CryptoTrace_${truncAddr(state.activeAddr)}_${new Date().toISOString().slice(0,10)}.csv`,
+    download: `Крипта_${truncAddr(state.activeAddr)}_${new Date().toISOString().slice(0,10)}.csv`,
   });
   document.body.appendChild(a); a.click(); a.remove();
   showToast('CSV экспортирован', 'success');
@@ -1788,7 +1785,7 @@ function exportPoolCSV() {
   const csv = '﻿' + headers.map(q).join(';') + '\r\n' + csvRows.join('\r\n');
   const a = Object.assign(document.createElement('a'), {
     href: URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' })),
-    download: `CryptoTrace_Pool_${new Date().toISOString().slice(0,10)}.csv`,
+    download: `Крипта_Pool_${new Date().toISOString().slice(0,10)}.csv`,
   });
   document.body.appendChild(a); a.click(); a.remove();
   showToast(`CSV: ${rows.length.toLocaleString()} транзакций`, 'success');
