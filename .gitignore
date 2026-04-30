@@ -16,3 +16,7 @@ Thumbs.db
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Auth — НЕ пушить в git
+users.json
+.secret_key

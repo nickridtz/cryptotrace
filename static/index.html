@@ -61,8 +61,125 @@
     .btn-sm { height:32px; padding:0 12px; font-size:12px; }
     .btn-icon { padding:0; width:32px; justify-content:center; }
     .btn:disabled { opacity:.45; cursor:not-allowed; transform:none !important; filter:none !important; }
-    .header-r { display:flex; gap:8px; margin-left:auto; }
+    .header-r { display:flex; gap:8px; }
     kbd { font-family:var(--mono); font-size:10px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); border-radius:4px; padding:1px 5px; color:rgba(255,255,255,.5); }
+
+    /* ── LOGIN SCREEN ───────────────────────────────────────── */
+    #login-screen {
+      position:fixed; inset:0; z-index:9999;
+      background: linear-gradient(135deg, #0f0e2a 0%, #1e1b4b 40%, #312e81 70%, #1e1b4b 100%);
+      display:flex; align-items:center; justify-content:center;
+      padding:24px;
+    }
+    #login-screen.hidden { display:none; }
+    .login-card {
+      background:#fff; border-radius:24px; padding:40px 44px;
+      width:100%; max-width:400px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.2);
+      animation: loginIn .35s cubic-bezier(.22,.68,0,1.2);
+    }
+    @keyframes loginIn { from { opacity:0; transform:scale(.92) translateY(16px); } to { opacity:1; transform:none; } }
+    .login-logo {
+      width:60px; height:60px; border-radius:18px;
+      background: var(--primary-grad);
+      display:flex; align-items:center; justify-content:center;
+      margin:0 auto 20px;
+      box-shadow:0 8px 24px rgba(99,102,241,.4);
+    }
+    .login-logo svg { width:34px; height:34px; }
+    .login-title { text-align:center; font-size:22px; font-weight:800; color:var(--text); letter-spacing:-.03em; margin-bottom:4px; }
+    .login-sub   { text-align:center; font-size:13px; color:var(--text-2); margin-bottom:28px; }
+    .login-field { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+    .login-label { font-size:12px; font-weight:600; color:var(--text-2); letter-spacing:.02em; text-transform:uppercase; }
+    .login-input {
+      height:44px; border:2px solid var(--border); border-radius:var(--radius-sm);
+      padding:0 14px; font-size:14px; font-family:var(--font); color:var(--text);
+      outline:none; transition:border-color .15s, box-shadow .15s; background:var(--surface);
+    }
+    .login-input:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(99,102,241,.12); }
+    .login-btn {
+      width:100%; height:48px; border:none; border-radius:var(--radius-sm);
+      background:var(--primary-grad); color:#fff;
+      font-size:15px; font-weight:700; font-family:var(--font);
+      cursor:pointer; transition:all .15s; margin-top:8px;
+      box-shadow:0 4px 16px rgba(99,102,241,.4);
+      letter-spacing:-.01em;
+    }
+    .login-btn:hover { filter:brightness(1.08); box-shadow:0 6px 20px rgba(99,102,241,.5); }
+    .login-btn:active { transform:scale(.98); }
+    .login-btn:disabled { opacity:.6; cursor:not-allowed; transform:none; filter:none; }
+    .login-error {
+      display:none; margin-top:14px; padding:10px 14px;
+      background:var(--danger-bg); color:var(--danger);
+      border-radius:var(--radius-xs); font-size:13px; font-weight:500;
+      border:1px solid rgba(220,38,38,.2);
+    }
+    .login-error.visible { display:block; animation:shake .3s; }
+    @keyframes shake {
+      0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+    }
+
+    /* ── USERS MODAL ────────────────────────────────────────── */
+    .users-modal-bg {
+      position:fixed; inset:0; z-index:500;
+      background:rgba(15,14,42,.55); backdrop-filter:blur(4px);
+      display:flex; align-items:center; justify-content:center; padding:24px;
+      opacity:0; pointer-events:none; transition:opacity .2s;
+    }
+    .users-modal-bg.open { opacity:1; pointer-events:all; }
+    .users-modal {
+      background:var(--surface); border-radius:var(--radius); width:100%; max-width:520px;
+      box-shadow:var(--shadow-lg); transform:scale(.96) translateY(12px);
+      transition:transform .2s cubic-bezier(.22,.68,0,1.1);
+      max-height:90vh; display:flex; flex-direction:column; overflow:hidden;
+    }
+    .users-modal-bg.open .users-modal { transform:none; }
+    .users-modal-head {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:20px 24px 16px; border-bottom:1px solid var(--border);
+      flex-shrink:0;
+    }
+    .users-modal-head h3 { font-size:16px; font-weight:700; }
+    .users-modal-body { padding:20px 24px; overflow-y:auto; flex:1; }
+    .users-list { display:flex; flex-direction:column; gap:8px; margin-bottom:24px; }
+    .user-row {
+      display:flex; align-items:center; gap:10px;
+      padding:10px 14px; border-radius:var(--radius-sm);
+      background:var(--surface2); border:1px solid var(--border);
+    }
+    .user-row-name { font-weight:600; font-size:13px; flex:1; }
+    .user-role-badge {
+      font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px;
+    }
+    .user-role-badge.admin { background:#ede9fe; color:#7c3aed; }
+    .user-role-badge.user  { background:var(--primary-light); color:var(--primary); }
+    .user-row-actions { display:flex; gap:6px; }
+    .btn-icon-sm {
+      width:28px; height:28px; border-radius:var(--radius-xs);
+      border:1px solid var(--border); background:var(--surface);
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      font-size:13px; color:var(--text-2); transition:all .15s;
+    }
+    .btn-icon-sm:hover { background:var(--danger-bg); border-color:var(--danger); color:var(--danger); }
+    .btn-icon-sm.pass:hover { background:var(--primary-light); border-color:var(--primary); color:var(--primary); }
+    .btn-icon-sm.block:hover { background:#fef9c3; border-color:#ca8a04; color:#ca8a04; }
+    .btn-icon-sm.unblock:hover { background:var(--success-bg); border-color:var(--success); color:var(--success); }
+    .user-row.disabled-user { opacity:.55; background:repeating-linear-gradient(135deg,var(--surface2),var(--surface2) 6px,#f1f5f9 6px,#f1f5f9 12px); }
+    .user-status-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; }
+    .user-status-badge.blocked { background:#fef9c3; color:#92400e; border:1px solid #fde68a; }
+    .users-divider { font-size:12px; font-weight:700; color:var(--text-2); text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px; }
+    .users-form { display:flex; flex-direction:column; gap:12px; }
+    .users-form-row { display:flex; gap:10px; }
+    .users-form-row .form-field { flex:1; }
+    .form-field { display:flex; flex-direction:column; gap:5px; }
+    .form-label { font-size:11px; font-weight:600; color:var(--text-2); text-transform:uppercase; letter-spacing:.04em; }
+    .form-input {
+      height:38px; border:1.5px solid var(--border); border-radius:var(--radius-xs);
+      padding:0 12px; font-size:13px; font-family:var(--font); color:var(--text);
+      outline:none; transition:border-color .15s;
+    }
+    .form-input:focus { border-color:var(--primary); }
+    .form-select { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; cursor:pointer; }
 
     /* ── LANDING ────────────────────────────────────────────── */
     #landing {
@@ -379,6 +496,78 @@
 </head>
 <body>
 
+<!-- ── USERS MODAL ──────────────────────────────────────────── -->
+<div class="users-modal-bg" id="users-modal-bg">
+  <div class="users-modal">
+    <div class="users-modal-head">
+      <h3>👥 Управление пользователями</h3>
+      <button class="btn btn-ghost-light btn-sm btn-icon" data-act="close-users">✕</button>
+    </div>
+    <div class="users-modal-body">
+      <div class="users-divider" style="margin-bottom:10px">Текущие пользователи</div>
+      <div class="users-list" id="users-list">
+        <div style="color:var(--text-3);font-size:13px">Загрузка…</div>
+      </div>
+
+      <div class="users-divider">Создать пользователя</div>
+      <div class="users-form">
+        <div class="users-form-row">
+          <div class="form-field">
+            <label class="form-label">Логин</label>
+            <input class="form-input" id="nu-login" type="text" placeholder="username" autocomplete="off">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Роль</label>
+            <select class="form-input form-select" id="nu-role">
+              <option value="user">Пользователь</option>
+              <option value="admin">Администратор</option>
+            </select>
+          </div>
+        </div>
+        <div class="users-form-row">
+          <div class="form-field">
+            <label class="form-label">Пароль</label>
+            <input class="form-input" id="nu-pass" type="password" placeholder="минимум 6 символов">
+          </div>
+          <div class="form-field">
+            <label class="form-label">Повторите пароль</label>
+            <input class="form-input" id="nu-pass2" type="password" placeholder="••••••">
+          </div>
+        </div>
+        <div class="login-error" id="nu-error"></div>
+        <button class="btn btn-primary" id="nu-submit-btn" data-act="create-user" style="align-self:flex-start;padding:0 24px">
+          + Создать
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── LOGIN SCREEN ─────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+    </div>
+    <div class="login-title">Крипта</div>
+    <div class="login-sub">Введите данные для входа</div>
+    <form id="login-form" onsubmit="doLogin(event)">
+      <div class="login-field">
+        <label class="login-label" for="login-user">Логин</label>
+        <input class="login-input" id="login-user" type="text" placeholder="user" autocomplete="username" required>
+      </div>
+      <div class="login-field">
+        <label class="login-label" for="login-pass">Пароль</label>
+        <input class="login-input" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+      <button class="login-btn" id="login-btn" type="submit">Войти</button>
+    </form>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
 <header>
   <a class="logo" data-act="home" title="На главную">
     <svg viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -393,13 +582,22 @@
     <input class="search-input" id="header-addr" type="text" placeholder="Адрес кошелька… (Ctrl+K)" autocomplete="off" spellcheck="false">
     <button class="btn btn-primary" data-act="search">Найти</button>
   </div>
-  <div class="header-r" id="header-r" style="display:none">
-    <button class="btn btn-ghost btn-sm" data-act="csv" title="Экспорт CSV">⬇ CSV</button>
-    <button class="btn btn-ghost btn-sm" data-act="clear" title="Начать заново">↻</button>
-  </div>
   <button class="btn btn-primary btn-sm" data-act="show-pool" title="Пул кошельков — собрать датасет">Пул</button>
   <button class="btn btn-primary btn-sm" data-act="show-synth" title="Синтетические данные по диапазону дат" style="background:linear-gradient(135deg,#7c3aed,#a855f7)">Синтетика</button>
-  <button class="btn btn-ghost btn-sm" data-act="open-changelog" title="Что нового">🚀 Что нового?</button>
+
+  <!-- Правая группа: прижата к краю через margin-left:auto -->
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+    <div class="header-r" id="header-r" style="display:none">
+      <button class="btn btn-ghost btn-sm" data-act="csv" title="Экспорт CSV">⬇ CSV</button>
+      <button class="btn btn-ghost btn-sm" data-act="clear" title="Начать заново">↻</button>
+    </div>
+    <button class="btn btn-ghost btn-sm" data-act="open-changelog" title="Что нового">🚀 Что нового?</button>
+    <button class="btn btn-ghost btn-sm" id="users-btn" data-act="open-users" title="Панель администратора" style="display:none">⚙ Панель Администратора</button>
+    <button class="btn btn-ghost btn-sm" id="logout-btn" data-act="logout" title="Выйти" style="gap:5px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Выйти
+    </button>
+  </div>
 </header>
 
 <!-- LANDING -->
@@ -917,8 +1115,9 @@ async function copyToClipboard(text) {
 // ═══════════════════════════════════════════════════════════════
 //   API
 // ═══════════════════════════════════════════════════════════════
-async function api(path) {
-  const r = await fetch(path);
+async function api(path, opts = {}) {
+  const r = await fetch(path, { credentials: 'include', ...opts });
+  if (r.status === 401) { showLoginScreen(); throw new Error('Требуется авторизация'); }
   let j = null;
   try { j = await r.json(); } catch {}
   if (!r.ok) throw new Error(j?.detail || `HTTP ${r.status}`);
@@ -1657,6 +1856,13 @@ document.addEventListener('click', (e) => {
     case 'close-modal':     closeTxModal(); break;
     case 'close-changelog': closeChangelog(); break;
     case 'open-changelog':  openChangelog(); break;
+    case 'logout':          doLogout(); break;
+    case 'open-users':      openUsersModal(); break;
+    case 'close-users':     closeUsersModal(); break;
+    case 'create-user':     createUser(); break;
+    case 'delete-user':     deleteUser(t.dataset.uname); break;
+    case 'reset-pass':      resetPassword(t.dataset.uname); break;
+    case 'toggle-block':    toggleBlock(t.dataset.uname); break;
     case 'select-addr':     selectAddrFromTable(t.dataset.addr); break;
     case 'select-addr-modal': closeTxModal(); selectAddrFromTable(t.dataset.addr); break;
     case 'open-tx':         openTxModal(t.dataset.hash); break;
@@ -2332,14 +2538,222 @@ $('changelog-modal').addEventListener('click', (e) => {
 });
 
 // ═══════════════════════════════════════════════════════════════
-//   INIT — URL state
+//   AUTH
 // ═══════════════════════════════════════════════════════════════
-(() => {
-  const params = new URLSearchParams(location.search);
-  const addr = params.get('addr');
-  if (addr) startSearch(addr);
+let currentUser = null; // { username, role }
 
-  // Show changelog if user hasn't seen this version yet
+function showLoginScreen() {
+  $('login-screen').classList.remove('hidden');
+  setTimeout(() => $('login-pass') && ($('login-pass').value = ''), 50);
+}
+function hideLoginScreen() {
+  $('login-screen').classList.add('hidden');
+}
+
+function applyUserSession(user) {
+  currentUser = user;
+  // Show admin-only UI
+  if (user.role === 'admin') {
+    $('users-btn').style.display = '';
+  }
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  const btn = $('login-btn');
+  const err = $('login-error');
+  err.classList.remove('visible');
+  btn.disabled = true;
+  btn.textContent = 'Вход…';
+
+  const fd = new FormData();
+  fd.append('username', $('login-user').value.trim());
+  fd.append('password', $('login-pass').value);
+
+  try {
+    const r = await fetch('/auth/login', { method: 'POST', body: fd, credentials: 'include' });
+    if (r.ok) {
+      const data = await r.json();
+      applyUserSession(data);
+      hideLoginScreen();
+      const params = new URLSearchParams(location.search);
+      const addr = params.get('addr');
+      if (addr) startSearch(addr);
+    } else {
+      const j = await r.json().catch(() => ({}));
+      err.textContent = j.detail || 'Неверный логин или пароль';
+      err.classList.add('visible');
+      $('login-pass').value = '';
+      $('login-pass').focus();
+    }
+  } catch {
+    err.textContent = 'Ошибка сети. Проверьте подключение.';
+    err.classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Войти';
+  }
+}
+
+async function doLogout() {
+  await fetch('/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+  currentUser = null;
+  $('users-btn').style.display = 'none';
+  showLoginScreen();
+  goHome();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//   USER MANAGEMENT (admin panel)
+// ═══════════════════════════════════════════════════════════════
+function openUsersModal() {
+  $('users-modal-bg').classList.add('open');
+  loadUsersList();
+}
+function closeUsersModal() {
+  $('users-modal-bg').classList.remove('open');
+}
+
+async function loadUsersList() {
+  const list = $('users-list');
+  list.innerHTML = '<div style="color:var(--text-3);font-size:13px">Загрузка…</div>';
+  try {
+    const users = await api('/auth/users');
+    if (!users.length) {
+      list.innerHTML = '<div style="color:var(--text-3);font-size:13px">Нет пользователей</div>';
+      return;
+    }
+    list.innerHTML = users.map(u => {
+      const isSelf    = u.username === currentUser?.username;
+      const isBlocked = !!u.disabled;
+      return `
+        <div class="user-row${isBlocked ? ' disabled-user' : ''}">
+          <span class="user-row-name">${escHTML(u.username)}</span>
+          <span class="user-role-badge ${u.role === 'admin' ? 'admin' : 'user'}">${u.role === 'admin' ? 'Админ' : 'Пользователь'}</span>
+          ${isBlocked ? '<span class="user-status-badge blocked">Заблокирован</span>' : ''}
+          <div class="user-row-actions" style="margin-left:auto">
+            <button class="btn-icon-sm pass" title="Сменить пароль"
+              data-act="reset-pass" data-uname="${escHTML(u.username)}">🔑</button>
+            ${!isSelf ? `
+              <button class="btn-icon-sm ${isBlocked ? 'unblock' : 'block'}"
+                title="${isBlocked ? 'Разблокировать' : 'Заблокировать'}"
+                data-act="toggle-block" data-uname="${escHTML(u.username)}">
+                ${isBlocked ? '✓' : '⊘'}
+              </button>
+              <button class="btn-icon-sm" title="Удалить пользователя"
+                data-act="delete-user" data-uname="${escHTML(u.username)}">✕</button>
+            ` : '<div style="width:64px"></div>'}
+          </div>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = `<div style="color:var(--danger);font-size:13px">${escHTML(e.message)}</div>`;
+  }
+}
+
+async function createUser() {
+  const login  = $('nu-login').value.trim();
+  const pass   = $('nu-pass').value;
+  const pass2  = $('nu-pass2').value;
+  const role   = $('nu-role').value;
+  const err    = $('nu-error');
+  err.classList.remove('visible');
+
+  if (!login)          { err.textContent = 'Введите логин'; err.classList.add('visible'); return; }
+  if (pass !== pass2)  { err.textContent = 'Пароли не совпадают'; err.classList.add('visible'); return; }
+  if (pass.length < 6) { err.textContent = 'Пароль минимум 6 символов'; err.classList.add('visible'); return; }
+
+  const btn = $('nu-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Создание…';
+  try {
+    await api('/auth/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: login, password: pass, role }),
+      credentials: 'include',
+    });
+    $('nu-login').value = '';
+    $('nu-pass').value  = '';
+    $('nu-pass2').value = '';
+    showToast(`Пользователь «${login}» создан`, 'success');
+    loadUsersList();
+  } catch (e) {
+    err.textContent = e.message;
+    err.classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '+ Создать';
+  }
+}
+
+async function toggleBlock(username) {
+  try {
+    const res = await api(`/auth/users/${encodeURIComponent(username)}/toggle-block`, {
+      method: 'POST', credentials: 'include',
+    });
+    showToast(res.disabled ? `«${username}» заблокирован` : `«${username}» разблокирован`, 'success');
+    loadUsersList();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function deleteUser(username) {
+  if (!confirm(`Удалить пользователя «${username}»?`)) return;
+  try {
+    await api(`/auth/users/${encodeURIComponent(username)}`, {
+      method: 'DELETE', credentials: 'include',
+    });
+    showToast(`Пользователь «${username}» удалён`, 'success');
+    loadUsersList();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function resetPassword(username) {
+  const pass = prompt(`Новый пароль для «${username}»:`);
+  if (!pass) return;
+  if (pass.length < 6) { showToast('Пароль минимум 6 символов', 'error'); return; }
+  try {
+    await api(`/auth/users/${encodeURIComponent(username)}/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pass }),
+      credentials: 'include',
+    });
+    showToast(`Пароль «${username}» обновлён`, 'success');
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// Close on backdrop click
+$('users-modal-bg').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeUsersModal();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//   INIT — auth check + URL state
+// ═══════════════════════════════════════════════════════════════
+(async () => {
+  try {
+    const r = await fetch('/auth/me', { credentials: 'include' });
+    if (r.ok) {
+      const data = await r.json();
+      applyUserSession(data);
+      hideLoginScreen();
+      const params = new URLSearchParams(location.search);
+      const addr = params.get('addr');
+      if (addr) startSearch(addr);
+    } else {
+      showLoginScreen();
+    }
+  } catch {
+    showLoginScreen();
+  }
+
   if (localStorage.getItem('changelog_seen') !== CHANGELOG_VERSION) {
     setTimeout(openChangelog, 400);
   }
